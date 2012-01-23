@@ -19,6 +19,14 @@ package org.apache.maven.plugin.assembly.archive;
  * under the License.
  */
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.StringWriter;
+import java.net.JarURLConnection;
+import java.net.URL;
+import java.util.Collections;
 import org.apache.maven.archiver.MavenArchiveConfiguration;
 import org.apache.maven.model.Model;
 import org.apache.maven.plugin.assembly.testutils.MockManager;
@@ -29,18 +37,9 @@ import org.codehaus.plexus.archiver.Archiver;
 import org.codehaus.plexus.archiver.ArchiverException;
 import org.codehaus.plexus.archiver.jar.JarArchiver;
 import org.codehaus.plexus.util.IOUtil;
-import org.easymock.MockControl;
-
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.StringWriter;
-import java.net.JarURLConnection;
-import java.net.URL;
-import java.util.Collections;
 
 import junit.framework.TestCase;
+import org.easymock.MockControl;
 
 public class ManifestCreationFinalizerTest
     extends TestCase
@@ -85,7 +84,7 @@ public class ManifestCreationFinalizerTest
 
         File tempDir = fileManager.createTempDir();
 
-        File manifestFile = fileManager.createFile( tempDir, "MANIFEST.MF", "Main-Class: Stuff" );
+        File manifestFile = fileManager.createFile( tempDir, "MANIFEST.MF", "Main-Class: Stuff\n" );
 
         config.setManifestFile( manifestFile );
 

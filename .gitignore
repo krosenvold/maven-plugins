@@ -7,3 +7,5 @@ target
 
 .DS_Store
 maven-war-plugin/maven-archiver
+maven-rar-plugin/maven-archiver
+
