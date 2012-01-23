@@ -52,7 +52,7 @@ under the License.
 
   <properties>
     <mdoVersion>1.1.2</mdoVersion>
-    <mavenArchiverVersion>2.4.3-SNAPSHOT</mavenArchiverVersion>
+    <mavenArchiverVersion>2.5-SNAPSHOT</mavenArchiverVersion>
     <mavenFilteringVersion>1.0</mavenFilteringVersion>
     <mavenVersion>2.2.1</mavenVersion>
     <testOutputToFile>true</testOutputToFile>

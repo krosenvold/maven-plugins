@@ -24,6 +24,7 @@ import org.apache.maven.model.Model;
 import org.apache.maven.plugin.assembly.testutils.MockManager;
 import org.apache.maven.plugin.assembly.testutils.TestFileManager;
 import org.apache.maven.project.MavenProject;
+import org.codehaus.plexus.archiver.ArchiveFinalizer;
 import org.codehaus.plexus.archiver.Archiver;
 import org.codehaus.plexus.archiver.ArchiverException;
 import org.codehaus.plexus.archiver.jar.JarArchiver;
@@ -90,9 +91,9 @@ public class ManifestCreationFinalizerTest
 
         JarArchiver archiver = new JarArchiver();
 
-        archiver.setArchiveFinalizers( Collections.singletonList( new ManifestCreationFinalizer(
+        archiver.setArchiveFinalizers(Collections.<ArchiveFinalizer>singletonList( new ManifestCreationFinalizer(
                                                                                                  project,
-                                                                                                 config ) ) );
+                                                                                                 config ) ));
 
         File file = fileManager.createTempFile();
 
@@ -127,9 +128,9 @@ public class ManifestCreationFinalizerTest
 
         JarArchiver archiver = new JarArchiver();
 
-        archiver.setArchiveFinalizers( Collections.singletonList( new ManifestCreationFinalizer(
+        archiver.setArchiveFinalizers(Collections.<ArchiveFinalizer>singletonList( new ManifestCreationFinalizer(
                                                                                                  project,
-                                                                                                 config ) ) );
+                                                                                                 config ) ));
 
         File file = fileManager.createTempFile();
 

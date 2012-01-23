@@ -20,12 +20,7 @@ package org.apache.maven.plugin.assembly.filter;
  */
 
 import org.apache.maven.plugin.assembly.testutils.TestFileManager;
-import org.codehaus.plexus.archiver.ArchiveEntry;
-import org.codehaus.plexus.archiver.ArchivedFileSet;
-import org.codehaus.plexus.archiver.Archiver;
-import org.codehaus.plexus.archiver.ArchiverException;
-import org.codehaus.plexus.archiver.FileSet;
-import org.codehaus.plexus.archiver.ResourceIterator;
+import org.codehaus.plexus.archiver.*;
 import org.codehaus.plexus.archiver.zip.ZipArchiver;
 import org.codehaus.plexus.components.io.resources.PlexusIoResource;
 import org.codehaus.plexus.components.io.resources.PlexusIoResourceCollection;
@@ -265,7 +260,7 @@ public class ComponentsXmlArchiverFileFilterTest
 
         final File descriptorFile = fileManager.createTempFile();
 
-        archiver.setArchiveFinalizers( Collections.singletonList( filter ) );
+        archiver.setArchiveFinalizers(Collections.<ArchiveFinalizer>singletonList( filter ));
 
         archiver.createArchive();
 
@@ -581,6 +576,9 @@ public class ComponentsXmlArchiverFileFilterTest
                     throw new NoSuchElementException();
                 }
 
+                public void remove() {
+                    throw new NoSuchElementException();
+                }
             };
         }
 
