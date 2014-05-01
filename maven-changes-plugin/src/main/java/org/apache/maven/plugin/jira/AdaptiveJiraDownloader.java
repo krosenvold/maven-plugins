@@ -1,3 +1,5 @@
+package org.apache.maven.plugin.jira;
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -16,8 +18,6 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
-package org.apache.maven.plugin.jira;
 
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.issues.Issue;
@@ -46,7 +46,7 @@ public class AdaptiveJiraDownloader extends AbstractJiraDownloader
         {
             effectiveDownloader.doExecute();
         }
-        catch( RestJiraDownloader.NoRest nre )
+        catch ( RestJiraDownloader.NoRest nre )
         {
             getLog().info( "Falling back to RSS for issue download: " + nre.getMessage() );
             effectiveDownloader = new ClassicJiraDownloader();

@@ -103,14 +103,21 @@ public class ProjectJavamailMailSender
                 getLogger().error( "You can't use sslMode because your system is missing an SSL Provider.", e );
             }
         }
+
+        if ( isTlsEnabled() )
+        {
+            props.put( "mail.smtp.starttls.enable", "true" );
+        }
+
         if ( userProperties != null )
         {
-            for (Object o : userProperties.keySet()) {
+            for ( Object o : userProperties.keySet() )
+            {
                 String key = (String) o;
 
-                String value = userProperties.getProperty(key);
+                String value = userProperties.getProperty( key );
 
-                props.put(key, value);
+                props.put( key, value );
             }
         }
     }
@@ -151,9 +158,10 @@ public class ProjectJavamailMailSender
             {
                 InternetAddress[] addressTo = new InternetAddress[mail.getToAddresses().size()];
                 int count = 0;
-                for (Object o : mail.getToAddresses()) {
-                    String address = ((MailMessage.Address) o).getRfc2822Address();
-                    addressTo[count++] = new InternetAddress(address);
+                for ( Object o : mail.getToAddresses() )
+                {
+                    String address = ( (MailMessage.Address) o ).getRfc2822Address();
+                    addressTo[count++] = new InternetAddress( address );
                 }
                 msg.setRecipients( Message.RecipientType.TO, addressTo );
             }
@@ -162,9 +170,10 @@ public class ProjectJavamailMailSender
             {
                 InternetAddress[] addressCc = new InternetAddress[mail.getCcAddresses().size()];
                 int count = 0;
-                for (Object o : mail.getCcAddresses()) {
-                    String address = ((MailMessage.Address) o).getRfc2822Address();
-                    addressCc[count++] = new InternetAddress(address);
+                for ( Object o : mail.getCcAddresses() )
+                {
+                    String address = ( (MailMessage.Address) o ).getRfc2822Address();
+                    addressCc[count++] = new InternetAddress( address );
                 }
                 msg.setRecipients( Message.RecipientType.CC, addressCc );
             }
@@ -173,9 +182,10 @@ public class ProjectJavamailMailSender
             {
                 InternetAddress[] addressBcc = new InternetAddress[mail.getBccAddresses().size()];
                 int count = 0;
-                for (Object o : mail.getBccAddresses()) {
-                    String address = ((MailMessage.Address) o).getRfc2822Address();
-                    addressBcc[count++] = new InternetAddress(address);
+                for ( Object o : mail.getBccAddresses() )
+                {
+                    String address = ( (MailMessage.Address ) o ).getRfc2822Address();
+                    addressBcc[count++] = new InternetAddress( address );
                 }
                 msg.setRecipients( Message.RecipientType.BCC, addressBcc );
             }

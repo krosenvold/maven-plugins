@@ -19,26 +19,6 @@ package org.apache.maven.plugin.checkstyle;
  * under the License.
  */
 
-import com.puppycrawl.tools.checkstyle.DefaultLogger;
-import com.puppycrawl.tools.checkstyle.XMLLogger;
-import com.puppycrawl.tools.checkstyle.api.AuditListener;
-import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
-import org.apache.maven.model.Resource;
-import org.apache.maven.plugin.AbstractMojo;
-import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugin.MojoFailureException;
-import org.apache.maven.plugins.annotations.Component;
-import org.apache.maven.plugins.annotations.LifecyclePhase;
-import org.apache.maven.plugins.annotations.Mojo;
-import org.apache.maven.plugins.annotations.Parameter;
-import org.apache.maven.plugins.annotations.ResolutionScope;
-import org.apache.maven.project.MavenProject;
-import org.codehaus.plexus.util.ReaderFactory;
-import org.codehaus.plexus.util.StringUtils;
-import org.codehaus.plexus.util.xml.pull.MXParser;
-import org.codehaus.plexus.util.xml.pull.XmlPullParser;
-import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
-
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -47,10 +27,41 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Reader;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+
+import org.apache.maven.artifact.Artifact;
+import org.apache.maven.model.Dependency;
+import org.apache.maven.model.Plugin;
+import org.apache.maven.model.Resource;
+import org.apache.maven.plugin.AbstractMojo;
+import org.apache.maven.plugin.MojoExecution;
+import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.plugin.descriptor.PluginDescriptor;
+import org.apache.maven.plugins.annotations.Component;
+import org.apache.maven.plugins.annotations.LifecyclePhase;
+import org.apache.maven.plugins.annotations.Mojo;
+import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.plugins.annotations.ResolutionScope;
+import org.apache.maven.project.MavenProject;
+import org.codehaus.plexus.configuration.PlexusConfiguration;
+import org.codehaus.plexus.util.FileUtils;
+import org.codehaus.plexus.util.ReaderFactory;
+import org.codehaus.plexus.util.StringUtils;
+import org.codehaus.plexus.util.xml.pull.MXParser;
+import org.codehaus.plexus.util.xml.pull.XmlPullParser;
+import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
+
+import com.puppycrawl.tools.checkstyle.DefaultLogger;
+import com.puppycrawl.tools.checkstyle.XMLLogger;
+import com.puppycrawl.tools.checkstyle.api.AuditListener;
+import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
 
 /**
- * Performs Checkstyle analysis and outputs violations or a count of violations to the console, potentially failing the build.
+ * Performs Checkstyle analysis and outputs violations or a count of violations
+ * to the console, potentially failing the build.
  * It can also be configured to re-use an earlier analysis.
  *
  * @author <a href="mailto:joakim@erdfelt.net">Joakim Erdfelt</a>
@@ -63,6 +74,10 @@ public class CheckstyleViolationCheckMojo
 {
 
     private static final String JAVA_FILES = "**\\/*.java";
+
+    private static final String CHECKSTYLE_FILE_HEADER = "<?xml version=\"1.0\"?>\n"
+            + "<!DOCTYPE module PUBLIC \"-//Puppy Crawl//DTD Check Configuration 1.2//EN\"\n"
+            + "        \"http://www.puppycrawl.com/dtds/configuration_1_2.dtd\">\n";
 
     /**
      * Specifies the path and filename to save the Checkstyle output. The format
@@ -285,14 +300,24 @@ public class CheckstyleViolationCheckMojo
     /**
      * Output errors to console.
      */
-    @Parameter( defaultValue = "false" )
+    @Parameter( property = "checkstyle.consoleOutput", defaultValue = "false" )
     private boolean consoleOutput;
 
     /**
      * The Maven Project Object.
      */
-    @Component
+    @Parameter ( defaultValue = "${project}" )
     protected MavenProject project;
+    
+    /**
+     * The Plugin Descriptor
+     */
+    @Parameter( defaultValue= "${plugin}", readonly = true )
+    private PluginDescriptor plugin;
+
+    // remove when requiring Maven 3.x, just use #plugin 
+    @Parameter( defaultValue= "${mojoExecution}", readonly = true )
+    private MojoExecution mojoExecution;
 
     /**
      * If <code>null</code>, the Checkstyle plugin will display violations on stdout.
@@ -310,8 +335,6 @@ public class CheckstyleViolationCheckMojo
 
     /**
      * Specifies the names filter of the source files to be used for Checkstyle.
-     *
-     * <strong>Note:</strong> default value is {@code **\/*.java}.
      */
     @Parameter( property = "checkstyle.includes", defaultValue = JAVA_FILES, required = true )
     private String includes;
@@ -326,8 +349,6 @@ public class CheckstyleViolationCheckMojo
 
     /**
      * Specifies the names filter of the files to be used for Checkstyle when checking resources.
-     *
-     * <strong>Note:</strong> default value is {@code **\/*.properties}.
      * @since 2.11
      */
     @Parameter( property = "checkstyle.resourceIncludes", defaultValue = "**/*.properties", required = true )
@@ -366,18 +387,51 @@ public class CheckstyleViolationCheckMojo
     private File sourceDirectory;
 
     /**
-     * Whether to apply CheckStyle to resource directories.
+     * Whether to apply Checkstyle to resource directories.
      * @since 2.11
      */
     @Parameter( property = "checkstyle.includeResources", defaultValue = "true", required = true )
     private boolean includeResources = true;
 
     /**
-     * Whether to apply CheckStyle to test resource directories.
+     * Whether to apply Checkstyle to test resource directories.
      * @since 2.11
      */
     @Parameter( property = "checkstyle.includeTestResources", defaultValue = "true", required = true )
     private boolean includeTestResources = true;
+
+    /**
+     * By using this property, you can specify the whole checkstyle rules
+     * inline directly inside this pom.
+     *
+     * <pre>
+     * &lt;plugin&gt;
+     *   ...
+     *   &lt;configuration&gt;
+     *     &lt;checkstyleRules&gt;
+     *       &lt;module name="Checker"&gt;
+     *         &lt;module name="FileTabCharacter"&gt;
+     *           &lt;property name="eachLine" value="true" /&gt;
+     *         &lt;/module&gt;
+     *         &lt;module name="TreeWalker"&gt;
+     *           &lt;module name="EmptyBlock"/&gt;
+     *         &lt;/module&gt;
+     *       &lt;/module&gt;
+     *     &lt;/checkstyleRules&gt;
+     *   &lt;/configuration&gt;
+     *   ...
+     * </pre>
+     *
+     * @since 2.12
+     */
+    @Parameter
+    private PlexusConfiguration checkstyleRules;
+
+    /**
+     * dump file for inlined checkstyle rules 
+     */
+    @Parameter( property = "checkstyle.output.rules.file", defaultValue = "${project.build.directory}/checkstyle-rules.xml" )
+    private File rulesFiles;
 
     private ByteArrayOutputStream stringOutputStream;
 
@@ -392,6 +446,30 @@ public class CheckstyleViolationCheckMojo
             if ( !skipExec )
             {
 
+                if ( checkstyleRules != null )
+                {
+                    if ( ! "config/sun_checks.xml".equals( configLocation ) )
+                    {
+                        throw new MojoExecutionException( "If you use inline configuration for rules don't specify a configLocation" );
+                    }
+                    if ( checkstyleRules.getChildCount() > 1 )
+                    {
+                        throw new MojoExecutionException( "Currently only one root module is supported" );
+                    }
+                    PlexusConfiguration checkerModule = checkstyleRules.getChild( 0 );
+
+                    try
+                    {
+                        FileUtils.forceMkdir( rulesFiles.getParentFile() );
+                        FileUtils.fileWrite( rulesFiles, CHECKSTYLE_FILE_HEADER + checkerModule.toString() );
+                    }
+                    catch ( final IOException e )
+                    {
+                        throw new MojoExecutionException( e.getMessage(), e );
+                    }
+                    configLocation = rulesFiles.getAbsolutePath();
+                }
+
                 ClassLoader currentClassLoader = Thread.currentThread().getContextClassLoader();
 
                 try
@@ -404,10 +482,12 @@ public class CheckstyleViolationCheckMojo
                         .setIncludeResources( includeResources )
                         .setIncludeTestResources( includeTestResources )
                         .setIncludeTestSourceDirectory( includeTestSourceDirectory ).setListener( getListener() )
-                        .setLog( getLog() ).setProject( project ).setSourceDirectory( sourceDirectory ).setResources( resources )
+                        .setLog( getLog() ).setProject( project ).setSourceDirectory( sourceDirectory )
+                        .setResources( resources )
                         .setStringOutputStream( stringOutputStream ).setSuppressionsLocation( suppressionsLocation )
                         .setTestSourceDirectory( testSourceDirectory ).setConfigLocation( configLocation )
-                        .setPropertyExpansion( propertyExpansion ).setHeaderLocation( headerLocation )
+                        .setConfigurationArtifacts( collectArtifacts( "config" ) ).setPropertyExpansion( propertyExpansion )
+                        .setHeaderLocation( headerLocation ).setLicenseArtifacts( collectArtifacts( "license" ) )
                         .setCacheFile( cacheFile ).setSuppressionsFileExpression( suppressionsFileExpression )
                         .setEncoding( encoding ).setPropertiesLocation( propertiesLocation );
                     checkstyleExecutor.executeCheckstyle( request );
@@ -499,8 +579,21 @@ public class CheckstyleViolationCheckMojo
             {
                 if ( logViolationsToConsole )
                 {
-                    getLog().error( file + '[' + xpp.getAttributeValue( "", "line" ) + ':'
-                        + xpp.getAttributeValue( "", "column" ) + "] " + xpp.getAttributeValue( "", "message" ) );
+                    final String column = xpp.getAttributeValue( "", "column" ) == null ? "n/a" : xpp.getAttributeValue( "", "column" );
+                    final String logMessage = file + '[' + xpp.getAttributeValue( "", "line" ) + ':' + column + "] "
+                        + xpp.getAttributeValue( "", "message" );
+                    if ( "info".equals( xpp.getAttributeValue( "", "severity" ) ) )
+                    {
+                        getLog().info( logMessage );
+                    }
+                    else if ( "warning".equals( xpp.getAttributeValue( "", "severity" ) ) )
+                    {
+                        getLog().warn( logMessage );
+                    }
+                    else
+                    {
+                        getLog().error( logMessage );
+                    }
                 }
                 count++;
             }
@@ -606,5 +699,43 @@ public class CheckstyleViolationCheckMojo
 
         return listener;
     }
+    
+    @SuppressWarnings( "unchecked" )
+    private List<Artifact> collectArtifacts( String hint )
+    {
+        if ( plugin == null || plugin.getGroupId() == null )
+        {
+            // Maven 2.x workaround
+            plugin = mojoExecution.getMojoDescriptor().getPluginDescriptor();
+        }
+        
+        List<Artifact> artifacts = new ArrayList<Artifact>();
 
+        if ( project.getBuild().getPluginManagement() != null )
+        {
+            artifacts.addAll(  getCheckstylePluginDependenciesAsArtifacts(  project.getBuild().getPluginManagement().getPluginsAsMap(), hint ) );
+        }
+                        
+        artifacts.addAll(  getCheckstylePluginDependenciesAsArtifacts(  project.getBuild().getPluginsAsMap(), hint ) );
+
+        return artifacts;
+    }
+
+    private List<Artifact> getCheckstylePluginDependenciesAsArtifacts( Map<String, Plugin> plugins, String hint )
+    {
+        List<Artifact> artifacts = new ArrayList<Artifact>();
+        
+        Plugin checkstylePlugin = plugins.get( plugin.getGroupId() + ":" + plugin.getArtifactId() );
+        if ( checkstylePlugin != null )
+        {
+            for ( Dependency dep : checkstylePlugin.getDependencies() )
+            {
+             // @todo if we can filter on hints, it should be done here...
+                String depKey = dep.getGroupId() + ":" + dep.getArtifactId();
+                artifacts.add( (Artifact) plugin.getArtifactMap().get( depKey ) );
+            }
+        }
+        return artifacts;
+    }
+    
 }

@@ -22,7 +22,6 @@ package org.apache.maven.plugin.issues;
 import org.apache.maven.doxia.sink.Sink;
 import org.apache.maven.doxia.sink.SinkEventAttributeSet;
 import org.apache.maven.doxia.sink.SinkEventAttributes;
-import org.apache.maven.doxia.util.HtmlTools;
 import org.codehaus.plexus.util.StringUtils;
 
 import java.util.ResourceBundle;
@@ -94,7 +93,11 @@ public abstract class AbstractIssuesReportGenerator
 
         sink.section1();
 
-        sinkSectionTitle1Anchor( sink, title, title );
+        sink.sectionTitle1();
+
+        sink.text( title );
+
+        sink.sectionTitle1_();
     }
 
     protected void sinkCell( Sink sink, String text )
@@ -160,28 +163,6 @@ public abstract class AbstractIssuesReportGenerator
         sink.link_();
     }
 
-    protected void sinkSectionTitle1Anchor( Sink sink, String text, String anchor )
-    {
-        sink.sectionTitle1();
-
-        sink.text( text );
-
-        sink.sectionTitle1_();
-
-        sink.anchor( HtmlTools.encodeId( anchor ) );
-        sink.anchor_();
-    }
-
-    protected void sinkSectionTitle2Anchor( Sink sink, String text, String anchor )
-    {
-        sink.sectionTitle2();
-        sink.text( text );
-        sink.sectionTitle2_();
-
-        sink.anchor( HtmlTools.encodeId( anchor ) );
-        sink.anchor_();
-    }
-
     protected void sinkShowTypeIcon( Sink sink, String type )
     {
         String image = "";
@@ -190,27 +171,27 @@ public abstract class AbstractIssuesReportGenerator
         if ( type == null )
         {
             image = "images/icon_help_sml.gif";
-            altText = "?";
+            altText = "Unknown";
         }
         else if ( type.equals( "fix" ) )
         {
             image = "images/fix.gif";
-            altText = "fix";
+            altText = "Fix";
         }
         else if ( type.equals( "update" ) )
         {
             image = "images/update.gif";
-            altText = "update";
+            altText = "Update";
         }
         else if ( type.equals( "add" ) )
         {
             image = "images/add.gif";
-            altText = "add";
+            altText = "Add";
         }
         else if ( type.equals( "remove" ) )
         {
             image = "images/remove.gif";
-            altText = "remove";
+            altText = "Remove";
         }
 
         sink.tableCell();

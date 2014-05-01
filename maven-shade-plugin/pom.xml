@@ -25,12 +25,12 @@ under the License.
   <parent>
     <artifactId>maven-plugins</artifactId>
     <groupId>org.apache.maven.plugins</groupId>
-    <version>24</version>
+    <version>25</version>
     <relativePath>../maven-plugins/pom.xml</relativePath>
   </parent>
 
   <artifactId>maven-shade-plugin</artifactId>
-  <version>2.3-SNAPSHOT</version>
+  <version>2.4-SNAPSHOT</version>
   <packaging>maven-plugin</packaging>
 
   <name>Apache Maven Shade Plugin</name>
@@ -63,7 +63,7 @@ under the License.
     <mavenVersion>3.0</mavenVersion>
     <currentVersion>${project.version}</currentVersion>
     <mavenPluginVersion>3.2</mavenPluginVersion>
-    <maven.site.path>plugins-archives/${project.artifactId}-LATEST</maven.site.path>
+    <asmVersion>5.0.2</asmVersion>
   </properties>
 
   <contributors>
@@ -125,12 +125,12 @@ under the License.
     <dependency>
       <groupId>org.ow2.asm</groupId>
       <artifactId>asm</artifactId>
-      <version>4.2</version>
+      <version>${asmVersion}</version>
     </dependency>
     <dependency>
       <groupId>org.ow2.asm</groupId>
       <artifactId>asm-commons</artifactId>
-      <version>4.2</version>
+      <version>${asmVersion}</version>
     </dependency>
     <dependency>
       <groupId>org.jdom</groupId>
@@ -143,9 +143,9 @@ under the License.
       <version>2.1</version>
     </dependency>
     <dependency>
-      <groupId>com.github.krosenvold</groupId>
+      <groupId>org.vafer</groupId>
       <artifactId>jdependency</artifactId>
-      <version>0.9-SNAPSHOT</version>
+      <version>0.9</version>
     </dependency>
     <dependency>
       <groupId>org.codehaus.plexus</groupId>
@@ -190,13 +190,6 @@ under the License.
               <goal>descriptor</goal>
             </goals>
           </execution>
-          <!-- if you want to generate help goal -->
-          <execution>
-            <id>help-goal</id>
-            <goals>
-              <goal>helpmojo</goal>
-            </goals>
-          </execution>
         </executions>
       </plugin>
     
@@ -215,16 +208,6 @@ under the License.
 
     </plugins>
   </build>
-
-  <reporting>
-    <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-plugin-plugin</artifactId>
-        <version>${mavenPluginVersion}</version>
-      </plugin>
-    </plugins>
-  </reporting>
 
   <profiles>
     <profile>
@@ -245,7 +228,6 @@ under the License.
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-invoker-plugin</artifactId>
-            <version>1.8</version>
             <configuration>
               <goals>
                 <goal>clean</goal>

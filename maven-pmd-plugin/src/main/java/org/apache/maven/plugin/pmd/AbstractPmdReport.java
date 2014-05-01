@@ -271,9 +271,6 @@ public abstract class AbstractPmdReport
     protected Map<File, PmdFileInfo> getFilesToProcess()
         throws IOException
     {
-        String sourceXref = constructXRefLocation( false );
-        String testXref = includeTests ? constructXRefLocation( true ) : "";
-
         if ( aggregate && !project.isExecutionRoot() )
         {
             return Collections.emptyMap();
@@ -286,9 +283,11 @@ public abstract class AbstractPmdReport
 
         Collection<File> excludeRootFiles = new HashSet<File>( excludeRoots.length );
 
-        for (File file : excludeRoots) {
-            if (file.isDirectory()) {
-                excludeRootFiles.add(file);
+        for ( File file : excludeRoots )
+        {
+            if ( file.isDirectory() )
+            {
+                excludeRootFiles.add( file );
             }
         }
 
@@ -296,11 +295,14 @@ public abstract class AbstractPmdReport
 
         if ( compileSourceRoots != null )
         {
-
             for ( String root : compileSourceRoots )
             {
                 File sroot = new File( root );
-                directories.add( new PmdFileInfo( project, sroot, sourceXref ) );
+                if ( sroot.exists() )
+                {
+                    String sourceXref = constructXRefLocation( false );
+                    directories.add( new PmdFileInfo( project, sroot, sourceXref ) );
+                }
             }
 
         }
@@ -311,7 +313,11 @@ public abstract class AbstractPmdReport
                 for ( String root : testSourceRoots )
                 {
                     File sroot = new File( root );
-                    directories.add( new PmdFileInfo( project, sroot, testXref ) );
+                    if ( sroot.exists() )
+                    {
+                        String testXref = constructXRefLocation( true );
+                        directories.add( new PmdFileInfo( project, sroot, testXref ) );
+                    }
                 }
             }
         }
@@ -324,7 +330,11 @@ public abstract class AbstractPmdReport
                 for ( String root : localCompileSourceRoots )
                 {
                     File sroot = new File( root );
-                    directories.add( new PmdFileInfo( localProject, sroot, sourceXref ) );
+                    if ( sroot.exists() )
+                    {
+                        String sourceXref = constructXRefLocation( false );
+                        directories.add( new PmdFileInfo( localProject, sroot, sourceXref ) );
+                    }
                 }
                 if ( includeTests )
                 {
@@ -333,7 +343,11 @@ public abstract class AbstractPmdReport
                     for ( String root : localTestCompileSourceRoots )
                     {
                         File sroot = new File( root );
-                        directories.add( new PmdFileInfo( localProject, sroot, testXref ) );
+                      if ( sroot.exists() )
+                      {
+                          String testXref = constructXRefLocation( true );
+                          directories.add( new PmdFileInfo( localProject, sroot, testXref ) );
+                      }
                     }
                 }
             }
@@ -355,8 +369,9 @@ public abstract class AbstractPmdReport
             {
                 @SuppressWarnings( "unchecked" ) List<File> newfiles =
                     FileUtils.getFiles( sourceDirectory, including, excluding );
-                for (File newfile : newfiles) {
-                    files.put(newfile.getCanonicalFile(), finfo);
+                for ( File newfile : newfiles )
+                {
+                    files.put( newfile.getCanonicalFile(), finfo );
                 }
             }
         }

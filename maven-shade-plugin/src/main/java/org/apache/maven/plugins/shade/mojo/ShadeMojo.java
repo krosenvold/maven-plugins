@@ -332,7 +332,6 @@ public class ShadeMojo
      * When true, it will attempt to shade the contents of the java source files when creating the sources jar.
      * When false, it will just relocate the java source files to the shaded paths, but will not modify the
      * actual contents of the java source files.
-     *
      */
     @Parameter( property = "shadeSourcesContent", defaultValue = "false" )
     private boolean shadeSourcesContent;
@@ -505,8 +504,8 @@ public class ShadeMojo
                 // rename the output file if a specific finalName is set
                 // but don't rename if the finalName is the <build><finalName>
                 // because this will be handled implicitly later
-                if ( finalName != null && finalName.length() > 0 && !finalName.equals(
-                    project.getBuild().getFinalName() ) )
+                if ( finalName != null && finalName.length() > 0 //
+                    && !finalName.equals( project.getBuild().getFinalName() ) )
                 {
                     String finalFileName = finalName + "." + project.getArtifact().getArtifactHandler().getExtension();
                     File finalFile = new File( outputDirectory, finalFileName );
@@ -530,7 +529,7 @@ public class ShadeMojo
                 {
                     getLog().info( "Replacing original artifact with shaded artifact." );
                     File originalArtifact = project.getArtifact().getFile();
-                    if (originalArtifact != null)
+                    if ( originalArtifact != null )
                     {
                         replaceFile( originalArtifact, outputJar );
 
@@ -544,7 +543,7 @@ public class ShadeMojo
                             projectHelper.attachArtifact( project, "jar", "sources", shadedSources );
                         }
 
-                        if (shadeTestJar)
+                        if ( shadeTestJar )
                         {
                             getLog().info( "Replacing original test artifact with shaded test artifact." );
                             File shadedTests = shadedTestArtifactFile();
@@ -872,7 +871,7 @@ public class ShadeMojo
         else
         {
             shadedName = shadedArtifactId + "-" + artifact.getVersion() + "-tests."
-                    + artifact.getArtifactHandler().getExtension();
+                + artifact.getArtifactHandler().getExtension();
         }
 
         return new File( outputDirectory, shadedName );
@@ -992,7 +991,6 @@ public class ShadeMojo
 
                 }
 
-
                 if ( model.getParent() != null )
                 {
                     File parentFile =
@@ -1070,8 +1068,8 @@ public class ShadeMojo
                 boolean found = false;
                 for ( Dependency dep : transitiveDeps )
                 {
-                    if ( dep.getArtifactId().equals( n3.getArtifact().getArtifactId() )
-                        && dep.getGroupId().equals( n3.getArtifact().getGroupId() ) )
+                    if ( dep.getArtifactId().equals( n3.getArtifact().getArtifactId() ) && dep.getGroupId().equals(
+                        n3.getArtifact().getGroupId() ) )
                     {
                         found = true;
                         break;
@@ -1082,8 +1080,8 @@ public class ShadeMojo
                 {
                     for ( Dependency dep : dependencies )
                     {
-                        if ( dep.getArtifactId().equals( n2.getArtifact().getArtifactId() )
-                            && dep.getGroupId().equals( n2.getArtifact().getGroupId() ) )
+                        if ( dep.getArtifactId().equals( n2.getArtifact().getArtifactId() ) && dep.getGroupId().equals(
+                            n2.getArtifact().getGroupId() ) )
                         {
                             Exclusion exclusion = new Exclusion();
                             exclusion.setArtifactId( n3.getArtifact().getArtifactId() );

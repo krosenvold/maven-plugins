@@ -238,6 +238,12 @@ public class ChangesMojo
 
     public boolean canGenerateReport()
     {
+        // Run only at the execution root
+        if ( runOnlyAtExecutionRoot && !isThisTheExecutionRoot() )
+        {
+            getLog().info( "Skipping the Changes Report in this project because it's not the Execution Root" );
+            return false;
+        }
         return xmlPath.isFile();
     }
 
@@ -246,12 +252,15 @@ public class ChangesMojo
     {
         Date now = new Date();
         SimpleDateFormat simpleDateFormat =
-                new SimpleDateFormat(publishDateFormat, new Locale(publishDateLocale));
+                new SimpleDateFormat( publishDateFormat, new Locale( publishDateLocale ) );
         Properties additionalProperties = new Properties();
-        additionalProperties.put("publishDate", simpleDateFormat.format(now));
+        additionalProperties.put( "publishDate", simpleDateFormat.format( now ) );
 
-        ChangesXML changesXml = getChangesFromFile( xmlPath, project, additionalProperties);
-        if ( changesXml == null ) return;
+        ChangesXML changesXml = getChangesFromFile( xmlPath, project, additionalProperties );
+        if ( changesXml == null )
+        {
+            return;
+        }
 
         if ( aggregated )
         {
@@ -265,12 +274,15 @@ public class ChangesMojo
             final String relativePath = absolutePath.substring( basePath.length() );
 
             List releaseList = changesXml.getReleaseList();
-            for (Object o : project.getCollectedProjects()) {
+            for ( Object o : project.getCollectedProjects() )
+            {
                 final MavenProject childProject = (MavenProject) o;
-                final File changesFile = new File(childProject.getBasedir(), relativePath);
-                final ChangesXML childXml = getChangesFromFile(changesFile, childProject, additionalProperties);
-                if (childXml != null) {
-                    releaseList = releaseUtils.mergeReleases(releaseList, childProject.getName(), childXml.getReleaseList());
+                final File changesFile = new File( childProject.getBasedir(), relativePath );
+                final ChangesXML childXml = getChangesFromFile( changesFile, childProject, additionalProperties );
+                if ( childXml != null )
+                {
+                    releaseList = releaseUtils.mergeReleases( releaseList, childProject.getName(),
+                                                              childXml.getReleaseList() );
                 }
             }
             changesXml.setReleaseList( releaseList );
@@ -397,11 +409,12 @@ public class ChangesMojo
                 // so we get encoding from the file itself
                 xmlStreamReader = new XmlStreamReader( changesXml );
                 String encoding = xmlStreamReader.getEncoding();
-                File resultFile = new File( filteredOutputDirectory, project.getGroupId() + "." + project.getArtifactId() + "-changes.xml" );
+                File resultFile = new File( filteredOutputDirectory,
+                                            project.getGroupId() + "." + project.getArtifactId() + "-changes.xml" );
 
                 final MavenFileFilterRequest mavenFileFilterRequest =
-                        new MavenFileFilterRequest( changesXml, resultFile, true, project, Collections.EMPTY_LIST, false,
-                                encoding, session, additionalProperties );
+                        new MavenFileFilterRequest( changesXml, resultFile, true, project, Collections.EMPTY_LIST,
+                                                    false, encoding, session, additionalProperties );
                 mavenFileFilter.copyFile( mavenFileFilterRequest );
                 changesXml = resultFile;
             }
@@ -459,9 +472,10 @@ public class ChangesMojo
         try
         {
             getLog().debug( "Copying static resources." );
-            for (String resourceName : resourceNames) {
-                URL url = this.getClass().getClassLoader().getResource(pluginResourcesBase + "/" + resourceName);
-                FileUtils.copyURLToFile(url, new File(getReportOutputDirectory(), resourceName));
+            for ( String resourceName : resourceNames )
+            {
+                URL url = this.getClass().getClassLoader().getResource( pluginResourcesBase + "/" + resourceName );
+                FileUtils.copyURLToFile( url, new File( getReportOutputDirectory(), resourceName ) );
             }
         }
         catch ( IOException e )
@@ -490,9 +504,10 @@ public class ChangesMojo
             }
             else
             {
-                for (Object o : issueLinkTemplatePerSystem.entrySet()) {
+                for ( Object o : issueLinkTemplatePerSystem.entrySet() )
+                {
                     Map.Entry entry = (Map.Entry) o;
-                    getLog().debug("issueLinkTemplatePerSystem[" + entry.getKey() + "] = " + entry.getValue());
+                    getLog().debug( "issueLinkTemplatePerSystem[" + entry.getKey() + "] = " + entry.getValue() );
                 }
             }
         }

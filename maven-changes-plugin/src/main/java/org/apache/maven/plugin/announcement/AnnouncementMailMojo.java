@@ -20,9 +20,11 @@ package org.apache.maven.plugin.announcement;
  */
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 import java.util.List;
 
 import javax.mail.internet.AddressException;
@@ -41,6 +43,8 @@ import org.codehaus.plexus.logging.console.ConsoleLogger;
 import org.codehaus.plexus.mailsender.MailMessage;
 import org.codehaus.plexus.mailsender.MailSenderException;
 import org.codehaus.plexus.util.IOUtil;
+import org.codehaus.plexus.util.ReaderFactory;
+import org.codehaus.plexus.util.StringUtils;
 
 /**
  * Goal which sends an announcement through email.
@@ -132,6 +136,13 @@ public class AnnouncementMailMojo
     @Parameter( property = "changes.sslMode", defaultValue = "false" )
     private boolean sslMode;
 
+    /**
+     * If the option startTls should be used.
+     *
+     * @since 2.10
+     */
+    @Parameter( property = "changes.startTls", defaultValue = "false" )
+    private boolean startTls;
 
     /**
      * Subject for the email.
@@ -141,15 +152,35 @@ public class AnnouncementMailMojo
     private String subject;
 
     /**
-     * The Velocity template used to format the announcement.
+     * The file that contains the generated announcement.
+     *
+     * @since 2.10
      */
-    @Parameter( property = "changes.template", defaultValue = "announcement.vm", required = true )
-    private String template;
+    @Parameter( property = "changes.announcementFile", defaultValue = "announcement.vm", required = true )
+    private String announcementFile;
+
+    /**
+     * Directory where the generated announcement file exists.
+     *
+     * @since 2.10
+     */
+    @Parameter( defaultValue = "${project.build.directory}/announcement", required = true )
+    private File announcementDirectory;
+
+    /**
+     * The encoding used in the announcement template.
+     *
+     * @since 2.10
+     */
+    @Parameter( property = "changes.templateEncoding", defaultValue = "${project.build.sourceEncoding}" )
+    private String templateEncoding;
 
     /**
      * Directory which contains the template for announcement email.
+     *
+     * @deprecated Starting with version 2.10 this parameter is no longer used. You must use {@link #announcementDirectory} instead.
      */
-    @Parameter( defaultValue = "${project.build.directory}/announcement", required = true )
+    @Parameter
     private File templateOutputDirectory;
 
     /**
@@ -185,6 +216,12 @@ public class AnnouncementMailMojo
     public void execute()
         throws MojoExecutionException
     {
+        // Fail build fast if it is using deprecated parameters
+        if ( templateOutputDirectory != null )
+        {
+            throw new MojoExecutionException( "You are using the old parameter 'templateOutputDirectory'. You must use 'announcementDirectory' instead." );
+        }
+
         // Run only at the execution root
         if ( runOnlyAtExecutionRoot && !isThisTheExecutionRoot() )
         {
@@ -192,7 +229,7 @@ public class AnnouncementMailMojo
         }
         else
         {
-            File templateFile = new File( templateOutputDirectory, template );
+            File file = new File( announcementDirectory, announcementFile );
 
             ConsoleLogger logger = new ConsoleLogger( Logger.LEVEL_INFO, "base" );
 
@@ -207,7 +244,7 @@ public class AnnouncementMailMojo
 
             mailer.setSmtpPort( getSmtpPort() );
 
-            mailer.setSslMode( sslMode );
+            mailer.setSslMode( sslMode, startTls );
 
             if ( username != null )
             {
@@ -226,7 +263,7 @@ public class AnnouncementMailMojo
                 getLog().debug( "fromDeveloperId: " + getFromDeveloperId() );
             }
 
-            if ( templateFile.isFile() )
+            if ( file.isFile() )
             {
                 getLog().info( "Connecting to Host: " + getSmtpHost() + ":" + getSmtpPort() );
 
@@ -234,7 +271,7 @@ public class AnnouncementMailMojo
             }
             else
             {
-                throw new MojoExecutionException( "Announcement template " + templateFile + " not found..." );
+                throw new MojoExecutionException( "Announcement file " + file + " not found..." );
             }
         }
     }
@@ -247,7 +284,7 @@ public class AnnouncementMailMojo
     protected void sendMessage()
         throws MojoExecutionException
     {
-        File templateFile = new File( templateOutputDirectory, template );
+        File file = new File( announcementDirectory, announcementFile );
         String email = "";
         final MailSender ms = getActualMailSender();
         final String fromName = ms.getName();
@@ -261,40 +298,39 @@ public class AnnouncementMailMojo
         {
             MailMessage mailMsg = new MailMessage();
             mailMsg.setSubject( getSubject() );
-            mailMsg.setContent( IOUtil.toString( readAnnouncement( templateFile ) ) );
+            mailMsg.setContent( readAnnouncement( file ) );
             mailMsg.setContentType( this.mailContentType );
             mailMsg.setFrom( fromAddress, fromName );
 
-            for (Object o1 : getToAddresses()) {
+            for ( Object o1 : getToAddresses() )
+            {
                 email = o1.toString();
-                getLog().info("Sending mail to " + email + "...");
-                mailMsg.addTo(email, "");
+                getLog().info( "Sending mail to " + email + "..." );
+                mailMsg.addTo( email, "" );
             }
 
             if ( getCcAddresses() != null )
             {
-                for (Object o : getCcAddresses()) {
+                for ( Object o : getCcAddresses() )
+                {
                     email = o.toString();
-                    getLog().info("Sending cc mail to " + email + "...");
-                    mailMsg.addCc(email, "");
+                    getLog().info( "Sending cc mail to " + email + "..." );
+                    mailMsg.addCc( email, "" );
                 }
             }
 
             if ( getBccAddresses() != null )
             {
-                for (Object o : getBccAddresses()) {
+                for ( Object o : getBccAddresses() )
+                {
                     email = o.toString();
-                    getLog().info("Sending bcc mail to " + email + "...");
-                    mailMsg.addBcc(email, "");
+                    getLog().info( "Sending bcc mail to " + email + "..." );
+                    mailMsg.addBcc( email, "" );
                 }
             }
 
             mailer.send( mailMsg );
             getLog().info( "Sent..." );
-        }
-        catch ( IOException ioe )
-        {
-            throw new MojoExecutionException( "Failed to send email.", ioe );
         }
         catch ( MailSenderException e )
         {
@@ -303,25 +339,48 @@ public class AnnouncementMailMojo
     }
 
     /**
-     * Read the announcement generated file.
+     * Read the content of the generated announcement file.
      *
      * @param file the file to be read
-     * @return fileReader Return the FileReader
-     * @throws MojoExecutionException if the file could not be found
+     * @return Return the announcement text
+     * @throws MojoExecutionException if the file could not be found, or if the encoding is unsupported
      */
-    protected FileReader readAnnouncement( File file )
+    protected String readAnnouncement( File file )
         throws MojoExecutionException
     {
-        FileReader fileReader;
+        InputStreamReader reader = null;
+        FileInputStream inputStream = null;
         try
         {
-            fileReader = new FileReader( file );
+            inputStream = new FileInputStream( file );
+
+            if ( StringUtils.isEmpty( templateEncoding ) )
+            {
+                templateEncoding = ReaderFactory.FILE_ENCODING;
+                getLog().warn( "File encoding has not been set, using platform encoding '" + templateEncoding
+                                   + "', i.e. build is platform dependent!" );
+            }
+
+            reader = new InputStreamReader( inputStream, templateEncoding );
+            return IOUtil.toString( reader );
         }
         catch ( FileNotFoundException fnfe )
         {
             throw new MojoExecutionException( "File not found. " + file );
         }
-        return fileReader;
+        catch ( UnsupportedEncodingException uee )
+        {
+            throw new MojoExecutionException( "Unsupported encoding: '" + templateEncoding + "'" );
+        }
+        catch ( IOException ioe )
+        {
+            throw new MojoExecutionException( "Failed to read the announcement file.", ioe );
+        }
+        finally
+        {
+            IOUtil.close( inputStream );
+            IOUtil.close( reader );
+        }
     }
 
     /**
@@ -368,11 +427,13 @@ public class AnnouncementMailMojo
         }
         else
         {
-            for (Object aFrom : from) {
+            for ( Object aFrom : from )
+            {
                 Developer developer = (Developer) aFrom;
 
-                if (fromDeveloperId.equals(developer.getId())) {
-                    return new MailSender(developer.getName(), developer.getEmail());
+                if ( fromDeveloperId.equals( developer.getId() ) )
+                {
+                    return new MailSender( developer.getName(), developer.getEmail() );
                 }
             }
             throw new MojoExecutionException(
@@ -484,6 +545,16 @@ public class AnnouncementMailMojo
         this.sslMode = sslMode;
     }
 
+    public boolean isStartTls()
+    {
+        return startTls;
+    }
+
+    public void setStartTls( boolean startTls )
+    {
+        this.startTls = startTls;
+    }
+
     public String getSubject()
     {
         return subject;
@@ -494,24 +565,24 @@ public class AnnouncementMailMojo
         this.subject = subject;
     }
 
-    public String getTemplate()
+    public String getAnnouncementFile()
     {
-        return template;
+        return announcementFile;
     }
 
-    public void setTemplate( String template )
+    public void setAnnouncementFile( String announcementFile )
     {
-        this.template = template;
+        this.announcementFile = announcementFile;
     }
 
-    public File getTemplateOutputDirectory()
+    public File getAnnouncementDirectory()
     {
-        return templateOutputDirectory;
+        return announcementDirectory;
     }
 
-    public void setTemplateOutputDirectory( File templateOutputDirectory )
+    public void setAnnouncementDirectory( File announcementDirectory )
     {
-        this.templateOutputDirectory = templateOutputDirectory;
+        this.announcementDirectory = announcementDirectory;
     }
 
     public List getToAddresses()

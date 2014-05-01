@@ -29,6 +29,8 @@ import java.util.List;
 import java.util.ResourceBundle;
 
 import org.apache.maven.doxia.sink.Sink;
+import org.apache.maven.doxia.sink.SinkEventAttributeSet;
+import org.apache.maven.doxia.sink.SinkEventAttributes;
 import org.apache.maven.doxia.tools.SiteTool;
 import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.plugin.logging.SystemStreamLog;
@@ -69,7 +71,7 @@ public class CheckstyleReportGenerator
     private SiteTool siteTool;
 
     private String xrefLocation;
-    
+
     private List<String> treeWalkerNames = Collections.singletonList( "TreeWalker" );
 
     public CheckstyleReportGenerator( Sink sink, ResourceBundle bundle, File basedir, SiteTool siteTool )
@@ -204,9 +206,6 @@ public class CheckstyleReportGenerator
     private void iconInfo()
     {
         sink.figure();
-        sink.figureCaption();
-        sink.text( bundle.getString( "report.checkstyle.infos" ) );
-        sink.figureCaption_();
         sink.figureGraphics( "images/icon_info_sml.gif" );
         sink.figure_();
     }
@@ -214,9 +213,6 @@ public class CheckstyleReportGenerator
     private void iconWarning()
     {
         sink.figure();
-        sink.figureCaption();
-        sink.text( bundle.getString( "report.checkstyle.warnings" ) );
-        sink.figureCaption_();
         sink.figureGraphics( "images/icon_warning_sml.gif" );
         sink.figure_();
     }
@@ -224,9 +220,6 @@ public class CheckstyleReportGenerator
     private void iconError()
     {
         sink.figure();
-        sink.figureCaption();
-        sink.text( bundle.getString( "report.checkstyle.errors" ) );
-        sink.figureCaption_();
         sink.figureGraphics( "images/icon_error_sml.gif" );
         sink.figure_();
     }
@@ -292,7 +285,7 @@ public class CheckstyleReportGenerator
 
         sink.tableRow();
         sink.tableHeaderCell();
-        sink.text( bundle.getString( "report.checkstyle.rules" ) );
+        sink.text( bundle.getString( "report.checkstyle.rule" ) );
         sink.tableHeaderCell_();
 
         sink.tableHeaderCell();
@@ -472,7 +465,20 @@ public class CheckstyleReportGenerator
         configSeverity = getConfigAttribute( checkerConfig, parentConfigurations, "severity", "error" );
         iconSeverity( configSeverity );
         sink.nonBreakingSpace();
-        sink.text( StringUtils.capitalise( configSeverity ) );
+
+        if ( SeverityLevel.INFO.getName().equalsIgnoreCase( configSeverity ) )
+        {
+            sink.text( bundle.getString( "report.checkstyle.info" ) );
+        }
+        else if ( SeverityLevel.WARNING.getName().equalsIgnoreCase( configSeverity ) )
+        {
+            sink.text( bundle.getString( "report.checkstyle.warning" ) );
+        }
+        else if ( SeverityLevel.ERROR.getName().equalsIgnoreCase( configSeverity ) )
+        {
+            sink.text( bundle.getString( "report.checkstyle.error" ) );
+        }
+
         sink.tableCell_();
 
         sink.tableRow_();
@@ -581,21 +587,21 @@ public class CheckstyleReportGenerator
         sink.tableHeaderCell_();
 
         sink.tableHeaderCell();
-        sink.text( bundle.getString( "report.checkstyle.infos" ) );
-        sink.nonBreakingSpace();
         iconInfo();
+        sink.nonBreakingSpace();
+        sink.text( bundle.getString( "report.checkstyle.infos" ) );
         sink.tableHeaderCell_();
 
         sink.tableHeaderCell();
-        sink.text( bundle.getString( "report.checkstyle.warnings" ) );
-        sink.nonBreakingSpace();
         iconWarning();
+        sink.nonBreakingSpace();
+        sink.text( bundle.getString( "report.checkstyle.warnings" ) );
         sink.tableHeaderCell_();
 
         sink.tableHeaderCell();
-        sink.text( bundle.getString( "report.checkstyle.errors" ) );
-        sink.nonBreakingSpace();
         iconError();
+        sink.nonBreakingSpace();
+        sink.text( bundle.getString( "report.checkstyle.errors" ) );
         sink.tableHeaderCell_();
         sink.tableRow_();
 
@@ -630,22 +636,22 @@ public class CheckstyleReportGenerator
 
         sink.tableRow();
         sink.tableHeaderCell();
-        sink.text( bundle.getString( "report.checkstyle.files" ) );
+        sink.text( bundle.getString( "report.checkstyle.file" ) );
         sink.tableHeaderCell_();
         sink.tableHeaderCell();
-        sink.text( bundle.getString( "report.checkstyle.infos.abbrev" ) );
-        sink.nonBreakingSpace();
         iconInfo();
+        sink.nonBreakingSpace();
+        sink.text( bundle.getString( "report.checkstyle.infos.abbrev" ) );
         sink.tableHeaderCell_();
         sink.tableHeaderCell();
-        sink.text( bundle.getString( "report.checkstyle.warnings.abbrev" ) );
-        sink.nonBreakingSpace();
         iconWarning();
+        sink.nonBreakingSpace();
+        sink.text( bundle.getString( "report.checkstyle.warnings.abbrev" ) );
         sink.tableHeaderCell_();
         sink.tableHeaderCell();
-        sink.text( bundle.getString( "report.checkstyle.errors.abbrev" ) );
-        sink.nonBreakingSpace();
         iconError();
+        sink.nonBreakingSpace();
+        sink.text( bundle.getString( "report.checkstyle.errors.abbrev" ) );
         sink.tableHeaderCell_();
         sink.tableRow_();
 
@@ -712,17 +718,16 @@ public class CheckstyleReportGenerator
             }
 
             sink.section2();
-            sink.sectionTitle2();
+            SinkEventAttributes attrs = new SinkEventAttributeSet();
+            attrs.addAttribute( SinkEventAttributes.ID, file.replace( '/', '.' ) );
+            sink.sectionTitle( Sink.SECTION_LEVEL_2, attrs );
             sink.text( file );
-            sink.sectionTitle2_();
-
-            sink.anchor( file.replace( '/', '.' ) );
-            sink.anchor_();
+            sink.sectionTitle_( Sink.SECTION_LEVEL_2 );
 
             sink.table();
             sink.tableRow();
             sink.tableHeaderCell();
-            sink.text( bundle.getString( "report.checkstyle.column.violation" ) );
+            sink.text( bundle.getString( "report.checkstyle.column.severity" ) );
             sink.tableHeaderCell_();
             sink.tableHeaderCell();
             sink.text( bundle.getString( "report.checkstyle.column.message" ) );
@@ -747,7 +752,7 @@ public class CheckstyleReportGenerator
         {
             SeverityLevel level = event.getSeverityLevel();
 
-            if ( ( getSeverityLevel() != null ) && !getSeverityLevel().equals( level ) )
+            if ( ( getSeverityLevel() != null ) && !( getSeverityLevel() != level ) )
             {
                 continue;
             }
@@ -756,17 +761,25 @@ public class CheckstyleReportGenerator
 
             sink.tableCell();
 
-            if ( SeverityLevel.INFO.equals( level ) )
+            switch( level )
             {
+            case INFO:
                 iconInfo();
-            }
-            else if ( SeverityLevel.WARNING.equals( level ) )
-            {
+                sink.nonBreakingSpace();
+                sink.text( bundle.getString( "report.checkstyle.info" ) );
+                break;
+            case WARNING:
                 iconWarning();
-            }
-            else if ( SeverityLevel.ERROR.equals( level ) )
-            {
+                sink.nonBreakingSpace();
+                sink.text( bundle.getString( "report.checkstyle.warning" ) );
+                break;
+            case ERROR:
                 iconError();
+                sink.nonBreakingSpace();
+                sink.text( bundle.getString( "report.checkstyle.error" ) );
+                break;
+            default:
+                break;
             }
 
             sink.tableCell_();
@@ -776,13 +789,18 @@ public class CheckstyleReportGenerator
             sink.tableCell_();
 
             sink.tableCell();
+
+            int line = event.getLine();
             if ( getXrefLocation() != null )
             {
                 sink
                     .link(
-                        getXrefLocation() + "/" + filename.replaceAll( "\\.java$", ".html" ) + "#" + event.getLine() );
+                        getXrefLocation() + "/" + filename.replaceAll( "\\.java$", ".html" ) + "#L" + line );
             }
-            sink.text( String.valueOf( event.getLine() ) );
+            if ( line != 0 )
+            {
+                sink.text( String.valueOf( event.getLine() ) );
+            }
             if ( getXrefLocation() != null )
             {
                 sink.link_();
@@ -862,13 +880,13 @@ public class CheckstyleReportGenerator
     {
         this.checkstyleConfig = config;
     }
-    
-    
+
+
     public void setTreeWalkerNames( List<String> treeWalkerNames )
     {
         this.treeWalkerNames = treeWalkerNames;
     }
-    
+
     public List<String> getTreeWalkerNames()
     {
         return treeWalkerNames;

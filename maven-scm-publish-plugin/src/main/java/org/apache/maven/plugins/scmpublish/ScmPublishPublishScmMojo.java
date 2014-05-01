@@ -42,6 +42,7 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -71,6 +72,10 @@ public class ScmPublishPublishScmMojo
     private List<File> added = new ArrayList<File>();
 
     private List<File> updated = new ArrayList<File>();
+
+    private int directories = 0;
+    private int files = 0;
+    private long size = 0;
 
     /**
      * Update scm checkout directory with content.
@@ -132,6 +137,7 @@ public class ScmPublishPublishScmMojo
 
             if ( source.isDirectory() )
             {
+                directories++;
                 if ( !checkoutContent.contains( name ) )
                 {
                     this.added.add( file );
@@ -175,6 +181,8 @@ public class ScmPublishPublishScmMojo
         {
             FileUtils.copyFile( srcFile, destFile );
         }
+        files++;
+        size += destFile.length();
     }
 
     /**
@@ -236,8 +244,10 @@ public class ScmPublishPublishScmMojo
 
         try
         {
-            logInfo( "Updating checkout directory with actual content: %s", content );
+            logInfo( "Updating checkout directory with actual content in %s", content );
             update( checkoutDirectory, content, ( project == null ) ? null : project.getModel().getModules() );
+            String displaySize = org.apache.commons.io.FileUtils.byteCountToDisplaySize( size );
+            logInfo( "Content consists in %d directories and %d files = %s", directories, files, displaySize );
         }
         catch ( IOException ioe )
         {
@@ -275,7 +285,7 @@ public class ScmPublishPublishScmMojo
             deleteFiles( deleted );
         }
 
-        logInfo( "Checking in SCM..." );
+        logInfo( "Checking in SCM, starting at " + new Date() + "..." );
         checkinFiles();
     }
 }

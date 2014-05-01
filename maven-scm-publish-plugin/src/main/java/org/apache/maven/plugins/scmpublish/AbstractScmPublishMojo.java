@@ -19,6 +19,17 @@ package org.apache.maven.plugins.scmpublish;
  * under the License.
  */
 
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.time.DurationFormatUtils;
@@ -38,24 +49,19 @@ import org.apache.maven.scm.command.checkin.CheckInScmResult;
 import org.apache.maven.scm.manager.NoSuchScmProviderException;
 import org.apache.maven.scm.manager.ScmManager;
 import org.apache.maven.scm.provider.ScmProvider;
+import org.apache.maven.scm.provider.ScmUrlUtils;
 import org.apache.maven.scm.provider.svn.AbstractSvnScmProvider;
 import org.apache.maven.scm.provider.svn.repository.SvnScmProviderRepository;
 import org.apache.maven.scm.repository.ScmRepository;
 import org.apache.maven.scm.repository.ScmRepositoryException;
+import org.apache.maven.settings.Server;
 import org.apache.maven.settings.Settings;
+import org.apache.maven.settings.crypto.DefaultSettingsDecryptionRequest;
+import org.apache.maven.settings.crypto.SettingsDecrypter;
+import org.apache.maven.settings.crypto.SettingsDecryptionRequest;
+import org.apache.maven.settings.crypto.SettingsDecryptionResult;
 import org.apache.maven.shared.release.config.ReleaseDescriptor;
 import org.apache.maven.shared.release.scm.ScmRepositoryConfigurator;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
 
 /**
  * Base class for the scm-publish mojos.
@@ -64,14 +70,28 @@ public abstract class AbstractScmPublishMojo
     extends AbstractMojo
 {
     /**
-     * Location of the scm publication tree.
+     * Location of the scm publication tree:
+     * <code>scm:&lt;scm_provider&gt;&lt;delimiter&gt;&lt;provider_specific_part&gt;</code>.
+     * Example:
+     * <code>scm:svn:https://svn.apache.org/repos/infra/websites/production/maven/content/plugins/maven-scm-publish-plugin-LATEST/</code>
      */
     @Parameter ( property = "scmpublish.pubScmUrl", defaultValue = "${project.distributionManagement.site.url}",
                  required = true )
     protected String pubScmUrl;
 
     /**
-     * Location where the scm check-out is done.
+     * If the checkout directory exists and this flag is activated, the plugin will try an SCM-update instead
+     * of delete then checkout.
+     */
+    @Parameter ( property = "scmpublish.tryUpdate", defaultValue = "false" )
+    protected boolean tryUpdate;
+
+   /**
+     * Location where the scm check-out is done. By default, scm checkout is done in build (target) directory,
+     * which is deleted on every <code>mvn clean</code>. To avoid this and get better performance, configure
+     * this location outside build structure and set <code>tryUpdate</code> to <code>true</code>.
+     * See <a href="http://maven.apache.org/plugins/maven-scm-publish-plugin/various-tips.html#Improving_SCM_Checkout_Performance">
+     * Improving SCM Checkout Performance</a> for more information.
      */
     @Parameter ( property = "scmpublish.checkoutDirectory",
                  defaultValue = "${project.build.directory}/scmpublish-checkout" )
@@ -127,6 +147,12 @@ public abstract class AbstractScmPublishMojo
      */
     @Component
     protected ScmRepositoryConfigurator scmRepositoryConfigurator;
+    
+    /**
+     * The serverId specified in the settings.xml, which should be used for the authentication.
+     */
+    @Parameter
+    private String serverId;
 
     /**
      * The SCM username to use.
@@ -156,13 +182,6 @@ public abstract class AbstractScmPublishMojo
     protected String siteOutputEncoding;
 
     /**
-     * If the checkout directory exists and this flag is activated, the plugin will try an SCM-update rather
-     * than delete then checkout.
-     */
-    @Parameter ( property = "scmpublish.tryUpdate", defaultValue = "false" )
-    protected boolean tryUpdate;
-
-    /**
      * Do not delete files to the scm
      */
     @Parameter ( property = "scmpublish.skipDeletedFiles", defaultValue = "false" )
@@ -177,6 +196,10 @@ public abstract class AbstractScmPublishMojo
      */
     @Component
     protected Settings settings;
+    
+    @Component
+    private SettingsDecrypter settingsDecrypter;
+ 
 
     /**
      * Collections of paths not to delete when checking content to delete.
@@ -209,6 +232,8 @@ public abstract class AbstractScmPublishMojo
     @Parameter
     protected String[] extraNormalizeExtensions;
 
+    private Set<String> normalizeExtensions;
+
     protected ScmProvider scmProvider;
 
     protected ScmRepository scmRepository;
@@ -236,13 +261,16 @@ public abstract class AbstractScmPublishMojo
     protected boolean requireNormalizeNewlines( File f )
         throws IOException
     {
-        List<String> extensions = Arrays.asList( NORMALIZE_EXTENSIONS );
-        if ( extraNormalizeExtensions != null )
+        if ( normalizeExtensions == null )
         {
-            extensions.addAll( Arrays.asList( extraNormalizeExtensions ) );
+            normalizeExtensions = new HashSet<String>( Arrays.asList( NORMALIZE_EXTENSIONS ) );
+            if ( extraNormalizeExtensions != null )
+            {
+                normalizeExtensions.addAll( Arrays.asList( extraNormalizeExtensions ) );
+            }
         }
 
-        return FilenameUtils.isExtension( f.getName(), extensions );
+        return FilenameUtils.isExtension( f.getName(), normalizeExtensions );
     }
 
     private ReleaseDescriptor setupScm()
@@ -254,21 +282,50 @@ public abstract class AbstractScmPublishMojo
             // in the release phase we have to change the checkout URL
             // to do a local checkout instead of going over the network.
 
-            // the first step is a bit tricky, we need to know which provider! like e.g. "scm:jgit:http://"
-            // the offset of 4 is because 'scm:' has 4 characters...
-            String providerPart = pubScmUrl.substring( 0, pubScmUrl.indexOf( ':', 4 ) );
+            String provider = ScmUrlUtils.getProvider( pubScmUrl );
+            String delimiter = ScmUrlUtils.getDelimiter( pubScmUrl );
+            
+            String providerPart = "scm:" + provider + delimiter;
 
             // X TODO: also check the information from releaseDescriptor.getScmRelativePathProjectDirectory()
             // X TODO: in case our toplevel git directory has no pom.
             // X TODO: fix pathname once I understand this.
-            scmUrl = providerPart + ":file://" + "target/localCheckout";
+            scmUrl = providerPart + "file://" + "target/localCheckout";
             logInfo( "Performing a LOCAL checkout from " + scmUrl );
         }
 
         ReleaseDescriptor releaseDescriptor = new ReleaseDescriptor();
         releaseDescriptor.setInteractive( settings.isInteractiveMode() );
 
-        //TODO use from settings with decrypt stuff
+        if ( username == null || password == null )
+        {
+            for ( Server server : settings.getServers() )
+            {
+                if ( server.getId().equals( serverId ) )
+                {
+                    SettingsDecryptionRequest decryptionRequest = new DefaultSettingsDecryptionRequest( server );
+
+                    SettingsDecryptionResult decryptionResult = settingsDecrypter.decrypt( decryptionRequest );
+
+                    if ( !decryptionResult.getProblems().isEmpty() )
+                    {
+                        // todo throw exception?
+                    }
+
+                    if ( username == null )
+                    {
+                        username = decryptionResult.getServer().getUsername();
+                    }
+
+                    if ( password == null )
+                    {
+                        password = decryptionResult.getServer().getPassword();
+                    }
+
+                    break;
+                }
+            }
+        }
 
         releaseDescriptor.setScmPassword( password );
         releaseDescriptor.setScmUsername( username );
@@ -337,21 +394,50 @@ public abstract class AbstractScmPublishMojo
         {
             ScmFileSet fileSet = new ScmFileSet( checkoutDirectory, includes, excludes );
 
-            ScmResult scmResult;
+            ScmResult scmResult = null;
             if ( tryUpdate && !forceCheckout )
             {
                 scmResult = scmProvider.update( scmRepository, fileSet );
             }
-            else if ( scmBranch == null )
-            {
-                scmResult = scmProvider.checkOut( scmRepository, fileSet );
-            }
             else
             {
-                ScmBranch scmBranch = new ScmBranch( this.scmBranch );
-                scmResult = scmProvider.checkOut( scmRepository, fileSet, scmBranch );
+                int attempt = 0;
+                while ( scmResult == null )
+                {
+                    try
+                    {
+                        if ( scmBranch == null )
+                        {
+                            scmResult = scmProvider.checkOut( scmRepository, fileSet );
+                        }
+                        else
+                        {
+                            ScmBranch scmBranch = new ScmBranch( this.scmBranch );
+                            scmResult = scmProvider.checkOut( scmRepository, fileSet, scmBranch );
+                        }
+                    }
+                    catch ( ScmException e )
+                    {
+                        // give it max 2 times to retry
+                        if ( attempt++ < 2 )
+                        {
+                            try
+                            {
+                                // wait 3 seconds
+                                Thread.sleep( 3 * 1000 );
+                            }
+                            catch ( InterruptedException ie )
+                            {
+                                // noop
+                            }
+                        }
+                        else
+                        {
+                            throw e;
+                        }
+                    }
+                }
             }
-
             checkScmResult( scmResult, "check out from SCM" );
         }
         catch ( ScmException e )
@@ -517,7 +603,7 @@ public abstract class AbstractScmPublishMojo
 
             logInfo( "Checked in %d file(s) to revision %s in %s", checkinResult.getCheckedInFiles().size(),
                      checkinResult.getScmRevision(),
-                     DurationFormatUtils.formatPeriod( start, System.currentTimeMillis(), "H'h'm'm's's'" ) );
+                     DurationFormatUtils.formatPeriod( start, System.currentTimeMillis(), "H' h 'm' m 's' s'" ) );
         }
         catch ( ScmException e )
         {
@@ -650,8 +736,10 @@ public abstract class AbstractScmPublishMojo
         // Fix required for Windows, which fit other OS as well
         if ( pubScmUrl.startsWith( "scm:svn:" ) )
         {
-            this.pubScmUrl = pubScmUrl.replaceFirst( "file:/[/]*", "file:///" );
+            pubScmUrl = pubScmUrl.replaceFirst( "file:/[/]*", "file:///" );
         }
+
+        this.pubScmUrl = pubScmUrl;
     }
 
 }

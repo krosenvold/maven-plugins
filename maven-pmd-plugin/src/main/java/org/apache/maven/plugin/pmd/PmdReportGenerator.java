@@ -42,7 +42,8 @@ import org.codehaus.plexus.util.StringUtils;
  * @author Brett Porter
  * @version $Id$
  */
-public class PmdReportGenerator {
+public class PmdReportGenerator
+{
     private Log log;
 
     private Sink sink;
@@ -147,7 +148,7 @@ public class PmdReportGenerator {
         int endLine = ruleViolation.getEndLine();
         if ( endLine != beginLine )
         {
-            sink.text( " - " );
+            sink.text( "&#x2013;" );
             outputLineLink( endLine, fileInfo );
         }
 
@@ -225,7 +226,7 @@ public class PmdReportGenerator {
 
         if ( xrefLocation != null )
         {
-            sink.link( xrefLocation + "/" + currentFilename.replaceAll( "\\.java$", ".html" ) + "#" + line );
+            sink.link( xrefLocation + "/" + currentFilename.replaceAll( "\\.java$", ".html" ) + "#L" + line );
         }
         sink.text( String.valueOf( line ) );
         if ( xrefLocation != null )

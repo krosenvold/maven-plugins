@@ -26,6 +26,8 @@ import net.sourceforge.pmd.RuleContext;
 import net.sourceforge.pmd.RulePriority;
 import net.sourceforge.pmd.RuleSetFactory;
 import net.sourceforge.pmd.RuleSetReferenceId;
+import net.sourceforge.pmd.benchmark.Benchmarker;
+import net.sourceforge.pmd.benchmark.TextReport;
 import net.sourceforge.pmd.lang.LanguageVersion;
 import net.sourceforge.pmd.renderers.CSVRenderer;
 import net.sourceforge.pmd.renderers.HTMLRenderer;
@@ -50,9 +52,11 @@ import org.codehaus.plexus.util.ReaderFactory;
 import org.codehaus.plexus.util.StringUtils;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.io.PrintStream;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -128,6 +132,22 @@ public class PmdReport
      */
     @Parameter( property = "pmd.typeResolution", defaultValue = "false" )
     private boolean typeResolution;
+
+    /**
+     * Controls whether PMD will track benchmark information.
+     *
+     * @since 3.1
+     */
+    @Parameter( property = "pmd.benchmark", defaultValue = "false" )
+    private boolean benchmark;
+
+    /**
+     * Benchmark output filename.
+     *
+     * @since 3.1
+     */
+    @Parameter( property = "pmd.benchmarkOutputFilename", defaultValue = "${project.build.directory}/pmd-benchmark.txt" )
+    private String benchmarkOutputFilename;
 
     /**
      */
@@ -221,7 +241,7 @@ public class PmdReport
                     result = reportListener.hasViolations();
                     if ( result )
                     {
-                        getLog().debug("Skipping Report as skipEmptyReport is true and there are no PMD violations.");
+                        getLog().debug( "Skipping Report as skipEmptyReport is true and there are no PMD violations." );
                     }
                 }
             }
@@ -337,7 +357,8 @@ public class PmdReport
         {
             getLog().debug( "Executing PMD..." );
 
-            PMD.processFiles( pmdConfiguration, ruleSetFactory, dataSources, ruleContext, Collections.<Renderer> emptyList() );
+            PMD.processFiles( pmdConfiguration, ruleSetFactory, dataSources, ruleContext,
+                              Collections.<Renderer> emptyList() );
 
             if ( getLog().isDebugEnabled() )
             {
@@ -359,6 +380,27 @@ public class PmdReport
         if ( isXml() && reportListener != null )
         {
             writeNonHtml( reportListener.asReport() );
+        }
+
+        if ( benchmark )
+        {
+            PrintStream benchmarkFileStream = null;
+            try
+            {
+                benchmarkFileStream = new PrintStream( benchmarkOutputFilename );
+                ( new TextReport() ).generate( Benchmarker.values(), benchmarkFileStream );
+            }
+            catch ( FileNotFoundException fnfe )
+            {
+                getLog().error( "Unable to generate benchmark file: " + benchmarkOutputFilename, fnfe );
+            }
+            finally
+            {
+                if ( null != benchmarkFileStream )
+                {
+                    benchmarkFileStream.close();
+                }
+            }
         }
     }
 
@@ -448,7 +490,8 @@ public class PmdReport
             r.end();
             writer.close();
 
-            if ( includeXmlInSite ) {
+            if ( includeXmlInSite )
+            {
                 File siteDir = getReportOutputDirectory();
                 siteDir.mkdirs();
                 FileUtils.copyFile( targetFile, new File( siteDir, "pmd." + format ) );
@@ -512,6 +555,8 @@ public class PmdReport
                 throw new MavenReportException( e.getMessage(), e );
             }
         }
+
+        configuration.setBenchmark( benchmark );
 
         return configuration;
     }

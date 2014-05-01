@@ -19,16 +19,30 @@ package org.apache.maven.plugin.checkstyle;
  * under the License.
  */
 
-import com.puppycrawl.tools.checkstyle.DefaultLogger;
-import com.puppycrawl.tools.checkstyle.XMLLogger;
-import com.puppycrawl.tools.checkstyle.api.AuditListener;
-import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.ResourceBundle;
+
+import org.apache.maven.artifact.Artifact;
 import org.apache.maven.doxia.siterenderer.Renderer;
 import org.apache.maven.doxia.tools.SiteTool;
+import org.apache.maven.model.Dependency;
+import org.apache.maven.model.Plugin;
 import org.apache.maven.model.ReportPlugin;
 import org.apache.maven.model.Resource;
+import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.checkstyle.rss.CheckstyleRssGenerator;
 import org.apache.maven.plugin.checkstyle.rss.CheckstyleRssGeneratorRequest;
+import org.apache.maven.plugin.descriptor.PluginDescriptor;
 import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
@@ -39,16 +53,10 @@ import org.codehaus.plexus.resource.loader.FileResourceLoader;
 import org.codehaus.plexus.util.PathTool;
 import org.codehaus.plexus.util.StringUtils;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.util.Calendar;
-import java.util.List;
-import java.util.Locale;
-import java.util.ResourceBundle;
+import com.puppycrawl.tools.checkstyle.DefaultLogger;
+import com.puppycrawl.tools.checkstyle.XMLLogger;
+import com.puppycrawl.tools.checkstyle.api.AuditListener;
+import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
 
 /**
  * Base abstract class for Checkstyle reports.
@@ -62,6 +70,94 @@ public abstract class AbstractCheckstyleReport
     public static final String PLUGIN_RESOURCES = "org/apache/maven/plugin/checkstyle";
 
     protected static final String JAVA_FILES = "**\\/*.java";
+
+    /**
+     * Specifies the cache file used to speed up Checkstyle on successive runs.
+     */
+    @Parameter( defaultValue = "${project.build.directory}/checkstyle-cachefile" )
+    protected String cacheFile;
+
+    /**
+     * <p>
+     * Specifies the location of the XML configuration to use.
+     * </p>
+     * <p/>
+     * <p>
+     * Potential values are a filesystem path, a URL, or a classpath resource.
+     * This parameter expects that the contents of the location conform to the
+     * xml format (Checkstyle <a
+     * href="http://checkstyle.sourceforge.net/config.html#Modules">Checker
+     * module</a>) configuration of rulesets.
+     * </p>
+     * <p/>
+     * <p>
+     * This parameter is resolved as resource, URL, then file. If successfully
+     * resolved, the contents of the configuration is copied into the
+     * <code>${project.build.directory}/checkstyle-configuration.xml</code>
+     * file before being passed to Checkstyle as a configuration.
+     * </p>
+     * <p/>
+     * <p>
+     * There are 4 predefined rulesets.
+     * </p>
+     * <p/>
+     * <ul>
+     * <li><code>config/sun_checks.xml</code>: Sun Checks.</li>
+     * <li><code>config/turbine_checks.xml</code>: Turbine Checks.</li>
+     * <li><code>config/avalon_checks.xml</code>: Avalon Checks.</li>
+     * <li><code>config/maven_checks.xml</code>: Maven Source Checks.</li>
+     * </ul>
+     */
+    @Parameter( property = "checkstyle.config.location", defaultValue = "config/sun_checks.xml" )
+    protected String configLocation;
+
+    /**
+     * Output errors to console.
+     */
+    @Parameter( property = "checkstyle.consoleOutput", defaultValue = "false" )
+    protected boolean consoleOutput;
+
+    /**
+     * The file encoding to use when reading the source files. If the property <code>project.build.sourceEncoding</code>
+     * is not set, the platform default encoding is used. <strong>Note:</strong> This parameter always overrides the
+     * property <code>charset</code> from Checkstyle's <code>TreeWalker</code> module.
+     *
+     * @since 2.2
+     */
+    @Parameter( property = "encoding", defaultValue = "${project.build.sourceEncoding}" )
+    protected String encoding;
+
+    /**
+     * Specifies if the build should fail upon a violation.
+     */
+    @Parameter( defaultValue = "false" )
+    protected boolean failsOnError;
+
+    /**
+     * <p>
+     * Specifies the location of the License file (a.k.a. the header file) that
+     * can be used by Checkstyle to verify that source code has the correct
+     * license header.
+     * </p>
+     * <p>
+     * You need to use ${checkstyle.header.file} in your Checkstyle xml
+     * configuration to reference the name of this header file.
+     * </p>
+     * <p>
+     * For instance:
+     * </p>
+     * <p>
+     * <code>
+     * &lt;module name="RegexpHeader">
+     * &lt;property name="headerFile" value="${checkstyle.header.file}"/>
+     * &lt;/module>
+     * </code>
+     * </p>
+     *
+     * @since 2.0-beta-2
+     */
+    @Parameter( property = "checkstyle.header.file", defaultValue = "LICENSE.txt" )
+    protected String headerLocation;
 
     /**
      * Skip entire check.
@@ -89,6 +185,36 @@ public abstract class AbstractCheckstyleReport
     private File outputFile;
 
     /**
+     * <p>
+     * Specifies the location of the properties file.
+     * </p>
+     * <p/>
+     * <p>
+     * This parameter is resolved as URL, File then resource. If successfully
+     * resolved, the contents of the properties location is copied into the
+     * <code>${project.build.directory}/checkstyle-checker.properties</code>
+     * file before being passed to Checkstyle for loading.
+     * </p>
+     * <p/>
+     * <p>
+     * The contents of the <code>propertiesLocation</code> will be made
+     * available to Checkstyle for specifying values for parameters within the
+     * xml configuration (specified in the <code>configLocation</code>
+     * parameter).
+     * </p>
+     *
+     * @since 2.0-beta-2
+     */
+    @Parameter( property = "checkstyle.properties.location" )
+    protected String propertiesLocation;
+
+    /**
+     * Allows for specifying raw property expansion information.
+     */
+    @Parameter
+    protected String propertyExpansion;
+
+    /**
      * Specifies the location of the resources to be used for Checkstyle.
      *
      * @since 2.10
@@ -103,6 +229,101 @@ public abstract class AbstractCheckstyleReport
      */
     @Parameter( defaultValue = "${project.testResources}", readonly = true )
     protected List<Resource> testResources;
+
+    /**
+     * Specifies the names filter of the source files to be used for Checkstyle.
+     */
+    @Parameter( property = "checkstyle.includes", defaultValue = JAVA_FILES, required = true )
+    protected String includes;
+
+    /**
+     * Specifies the names filter of the source files to be excluded for
+     * Checkstyle.
+     */
+    @Parameter( property = "checkstyle.excludes" )
+    protected String excludes;
+
+    /**
+     * Specifies the names filter of the resource files to be used for Checkstyle.
+     * @since 2.11
+     */
+    @Parameter( property = "checkstyle.resourceIncludes", defaultValue = "**/*.properties", required = true )
+    protected String resourceIncludes;
+
+    /**
+     * Specifies the names filter of the resource files to be excluded for
+     * Checkstyle.
+     * @since 2.11
+     */
+    @Parameter( property = "checkstyle.resourceExcludes" )
+    protected String resourceExcludes;
+
+    /**
+     * Specifies whether to include the resource directories in the check.
+     * @since 2.11
+     */
+    @Parameter( property = "checkstyle.includeResources", defaultValue = "true", required = true )
+    protected boolean includeResources;
+
+    /**
+     * Specifies whether to include the test resource directories in the check.
+     * @since 2.11
+     */
+    @Parameter( property = "checkstyle.includeTestResources", defaultValue = "true", required = true )
+    protected boolean includeTestResources;
+
+    /**
+     * Specifies the location of the source directory to be used for Checkstyle.
+     */
+    @Parameter( defaultValue = "${project.build.sourceDirectory}", required = true )
+    protected File sourceDirectory;
+
+    /**
+     * Specifies the location of the test source directory to be used for
+     * Checkstyle.
+     *
+     * @since 2.2
+     */
+    @Parameter( defaultValue = "${project.build.testSourceDirectory}" )
+    protected File testSourceDirectory;
+
+    /**
+     * Include or not the test source directory to be used for Checkstyle.
+     *
+     * @since 2.2
+     */
+    @Parameter( defaultValue = "false" )
+    protected boolean includeTestSourceDirectory;
+
+    /**
+     * The key to be used in the properties for the suppressions file.
+     *
+     * @since 2.1
+     */
+    @Parameter( property = "checkstyle.suppression.expression", defaultValue = "checkstyle.suppressions.file" )
+    protected String suppressionsFileExpression;
+
+    /**
+     * <p>
+     * Specifies the location of the suppressions XML file to use.
+     * </p>
+     * <p/>
+     * <p>
+     * This parameter is resolved as resource, URL, then file. If successfully
+     * resolved, the contents of the suppressions XML is copied into the
+     * <code>${project.build.directory}/checkstyle-supressions.xml</code> file
+     * before being passed to Checkstyle for loading.
+     * </p>
+     * <p/>
+     * <p>
+     * See <code>suppressionsFileExpression</code> for the property that will
+     * be made available to your checkstyle configuration.
+     * </p>
+     *
+     * @since 2.0-beta-2
+     */
+    @Parameter( property = "checkstyle.suppressions.location" )
+    protected String suppressionsLocation;
 
     /**
      * If <code>null</code>, the Checkstyle plugin will display violations on stdout.
@@ -153,9 +374,20 @@ public abstract class AbstractCheckstyleReport
     /**
      * The Maven Project Object.
      */
-    @Component
+    @Parameter( defaultValue = "${project}" )
     protected MavenProject project;
+    
+    
+    /**
+     * The Plugin Descriptor
+     */
+    @Parameter( defaultValue= "${plugin}", readonly = true )
+    private PluginDescriptor plugin;
 
+    // remove when requiring Maven 3.x, just use #plugin 
+    @Parameter( defaultValue= "${mojoExecution}", readonly = true )
+    private MojoExecution mojoExecution;
+    
     /**
      * Link the violation line numbers to the source xref. Will link
      * automatically if Maven JXR plugin is being used.
@@ -172,7 +404,8 @@ public abstract class AbstractCheckstyleReport
     private File xrefLocation;
 
     /**
-     * When using custom treeWalkers, specify their names here so the checks inside the treeWalker end up the the rule-summary
+     * When using custom treeWalkers, specify their names here so the checks
+     * inside the treeWalker end up the the rule-summary.
      * 
      * @since 2.11
      */
@@ -255,7 +488,8 @@ public abstract class AbstractCheckstyleReport
 
         try
         {
-            CheckstyleExecutorRequest request = createRequest();
+            CheckstyleExecutorRequest request = createRequest().setLicenseArtifacts( collectArtifacts( "license" ) )
+                            .setConfigurationArtifacts( collectArtifacts( "configuration" ) );
 
             CheckstyleResults results = checkstyleExecutor.executeCheckstyle( request );
 
@@ -293,6 +527,44 @@ public abstract class AbstractCheckstyleReport
      */
     protected abstract CheckstyleExecutorRequest createRequest()
             throws MavenReportException;
+
+    @SuppressWarnings( "unchecked" )
+    private List<Artifact> collectArtifacts( String hint )
+    {
+        if ( plugin == null || plugin.getGroupId() == null )
+        {
+            // Maven 2.x workaround
+            plugin = mojoExecution.getMojoDescriptor().getPluginDescriptor();
+        }
+        
+        List<Artifact> artifacts = new ArrayList<Artifact>();
+
+        if ( project.getBuild().getPluginManagement() != null )
+        {
+            artifacts.addAll(  getCheckstylePluginDependenciesAsArtifacts(  project.getBuild().getPluginManagement().getPluginsAsMap(), hint ) );
+        }
+                        
+        artifacts.addAll(  getCheckstylePluginDependenciesAsArtifacts(  project.getBuild().getPluginsAsMap(), hint ) );
+
+        return artifacts;
+    }
+
+    private List<Artifact> getCheckstylePluginDependenciesAsArtifacts( Map<String, Plugin> plugins, String hint )
+    {
+        List<Artifact> artifacts = new ArrayList<Artifact>();
+        
+        Plugin checkstylePlugin = plugins.get( plugin.getGroupId() + ":" + plugin.getArtifactId() );
+        if ( checkstylePlugin != null )
+        {
+            for ( Dependency dep : checkstylePlugin.getDependencies() )
+            {
+             // @todo if we can filter on hints, it should be done here...
+                String depKey = dep.getGroupId() + ":" + dep.getArtifactId();
+                artifacts.add( (Artifact) plugin.getArtifactMap().get( depKey ) );
+            }
+        }
+        return artifacts;
+    }
 
     /**
      * Creates and returns the report generation listener.
@@ -452,7 +724,7 @@ public abstract class AbstractCheckstyleReport
                 }
             }
 
-            if ( generator.getXrefLocation() == null )
+            if ( generator.getXrefLocation() == null && results.getFileCount() > 0 )
             {
                 getLog().warn( "Unable to locate Source XRef to link to - DISABLED" );
             }
@@ -475,4 +747,6 @@ public abstract class AbstractCheckstyleReport
         super.setReportOutputDirectory( reportOutputDirectory );
         this.outputDirectory = reportOutputDirectory;
     }
+    
+    
 }

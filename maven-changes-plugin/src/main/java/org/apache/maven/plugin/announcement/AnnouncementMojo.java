@@ -159,8 +159,18 @@ public class AnnouncementMojo
 
     /**
      * Directory where the announcement file will be generated.
+     *
+     * @since 2.10
      */
     @Parameter( defaultValue = "${project.build.directory}/announcement", required = true )
+    private File announcementDirectory;
+
+    /**
+     * Directory where the announcement file will be generated.
+     *
+     * @deprecated Starting with version 2.10 this parameter is no longer used. You must use {@link #announcementDirectory} instead.
+     */
+    @Parameter
     private File outputDirectory;
 
     /**
@@ -199,6 +209,16 @@ public class AnnouncementMojo
      */
     @Parameter( property = "changes.templateEncoding", defaultValue = "${project.build.sourceEncoding}" )
     private String templateEncoding;
+
+    /**
+     * Use the JIRA query language instead of the JIRA query based on HTTP parameters.
+     * From JIRA 5.1 and up only JQL is supported. JIRA 4.4 supports both JQL and URL parameter based queries.
+     * From 5.1.1 this is obsolete, since REST queries only use JQL.
+     *
+     * @since 2.10
+     */
+    @Parameter( property = "changes.useJql", defaultValue = "false" )
+    private boolean useJql;
 
     /**
      * Distribution URL of the artifact.
@@ -398,7 +418,7 @@ public class AnnouncementMojo
      * 
      * @since 2.9
      */
-    @Parameter( defaultValue = "http", property = "changes.githubAPIScheme")
+    @Parameter( defaultValue = "http", property = "changes.githubAPIScheme" )
     private String githubAPIScheme;
 
     /**
@@ -406,7 +426,7 @@ public class AnnouncementMojo
      * 
      * @since 2.9
      */
-    @Parameter( defaultValue = "80", property = "changes.githubAPIPort")
+    @Parameter( defaultValue = "80", property = "changes.githubAPIPort" )
     private int githubAPIPort;
 
     private ReleaseUtils releaseUtils = new ReleaseUtils( getLog() );
@@ -425,6 +445,12 @@ public class AnnouncementMojo
     public void execute()
         throws MojoExecutionException
     {
+        // Fail build fast if it is using deprecated parameters
+        if ( outputDirectory != null )
+        {
+            throw new MojoExecutionException( "You are using the old parameter 'outputDirectory'. You must use 'announcementDirectory' instead." );
+        }
+
         // Run only at the execution root
         if ( runOnlyAtExecutionRoot && !isThisTheExecutionRoot() )
         {
@@ -604,7 +630,7 @@ public class AnnouncementMojo
             }
 
 
-            processTemplate( context, getOutputDirectory(), template, announcementFile );
+            processTemplate( context, announcementDirectory, template, announcementFile );
         }
         catch ( ResourceNotFoundException rnfe )
         {
@@ -715,6 +741,8 @@ public class AnnouncementMojo
         jiraDownloader.setJiraUser( jiraUser );
 
         jiraDownloader.setJiraPassword( jiraPassword );
+
+        jiraDownloader.setUseJql( useJql );
 
         jiraDownloader.setWebUser( webUser );
 
@@ -854,22 +882,22 @@ public class AnnouncementMojo
     
     public void setIssueTypes( Map<String, String> issueTypes )
     {
-		this.issueTypes = issueTypes;
-	}
+        this.issueTypes = issueTypes;
+    }
 
     public Map<String, String> getIssueTypes()
     {
-		return issueTypes;
-	}
-
-    public File getOutputDirectory()
-    {
-        return outputDirectory;
+        return issueTypes;
     }
 
-    public void setOutputDirectory( File outputDirectory )
+    public File getAnnouncementDirectory()
     {
-        this.outputDirectory = outputDirectory;
+        return announcementDirectory;
+    }
+
+    public void setAnnouncementDirectory( File announcementDirectory )
+    {
+        this.announcementDirectory = announcementDirectory;
     }
 
     public String getPackaging()
