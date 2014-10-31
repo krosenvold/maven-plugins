@@ -341,6 +341,7 @@ under the License.
               <!-- These files are only resources for integration tests. -->
               <exclude>src/it/projects/repositories/repo-with-snapshot-parents/child/remote-repository/org/codehaus/plexus/plexus-utils/1.4.3-SNAPSHOT/plexus-utils-1.4.3-SNAPSHOT.pom</exclude>
               <exclude>src/it/projects/container-descriptors/metaInf-services-aggregation/**/*</exclude>
+              <exclude>src/it/projects/bugs/massembly-593/demo.cert</exclude>
               <exclude>src/it/projects/container-descriptors/metaInf-spring-aggregation/**/*</exclude>
               <!-- The following is used to exclude only txt files which don't have a license header -->
               <exclude>src/it/**/*.txt</exclude>
