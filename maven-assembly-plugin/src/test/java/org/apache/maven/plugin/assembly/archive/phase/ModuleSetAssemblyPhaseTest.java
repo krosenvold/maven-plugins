@@ -29,7 +29,6 @@ import org.apache.maven.plugin.assembly.archive.task.testutils.MockAndControlFor
 import org.apache.maven.plugin.assembly.archive.task.testutils.MockAndControlForAddFileSetsTask;
 import org.apache.maven.plugin.assembly.format.AssemblyFormattingException;
 import org.apache.maven.plugin.assembly.model.Assembly;
-import org.apache.maven.plugin.assembly.model.DependencySet;
 import org.apache.maven.plugin.assembly.model.FileSet;
 import org.apache.maven.plugin.assembly.model.ModuleBinaries;
 import org.apache.maven.plugin.assembly.model.ModuleSet;
@@ -54,13 +53,10 @@ import java.util.Set;
 
 import junit.framework.Assert;
 import junit.framework.TestCase;
-import org.easymock.classextension.EasyMock;
 import org.easymock.classextension.EasyMockSupport;
 
 import static java.util.Collections.singleton;
 import static org.apache.maven.plugin.assembly.resolved.ResolvedModuleSet.createResolvedModuleSet;
-import static org.easymock.EasyMock.anyInt;
-import static org.easymock.EasyMock.anyObject;
 
 
 public class ModuleSetAssemblyPhaseTest
@@ -324,7 +320,7 @@ public class ModuleSetAssemblyPhaseTest
     public void testAddModuleBinaries_ShouldReturnImmediatelyWhenBinariesIsNull()
         throws ArchiveCreationException, AssemblyFormattingException, InvalidAssemblerConfigurationException
     {
-        createPhase( null, null ).addModuleBinaries( null, null, null, null, null );
+        createPhase( null, null ).addModuleBinaries(null, null, null, null, null, null );
     }
 
     public void testAddModuleBinaries_ShouldFilterPomModule()
@@ -352,7 +348,8 @@ public class ModuleSetAssemblyPhaseTest
 
         mm.replayAll();
 
-        createPhase( new ConsoleLogger( Logger.LEVEL_DEBUG, "test" ), null ).addModuleBinaries( null, binaries,
+        createPhase( new ConsoleLogger( Logger.LEVEL_DEBUG, "test" ), null ).addModuleBinaries(
+            null, null, binaries,
                                                                                                 projects,
                                                                                                 macTask.archiver,
                                                                                                 macTask.configSource );
@@ -396,7 +393,7 @@ public class ModuleSetAssemblyPhaseTest
 
         ResolvedModuleSet rms = ResolvedModuleSet.empty().withArtifacts( Collections.<Artifact>emptySet() );
 
-        createPhase( logger, null ).addModuleBinaries( rms, binaries, projects, macTask.archiver, macTask.configSource );
+        createPhase( logger, null ).addModuleBinaries( null, rms, binaries, projects, macTask.archiver, macTask.configSource );
 
         mm.verifyAll();
     }
@@ -430,7 +427,7 @@ public class ModuleSetAssemblyPhaseTest
 
         try
         {
-            createPhase( logger, null ).addModuleBinaries( null, binaries, projects, macTask.archiver, macTask.configSource );
+            createPhase( logger, null ).addModuleBinaries( null, null, binaries, projects, macTask.archiver, macTask.configSource );
 
             fail( "Should throw an invalid configuration exception because of module with missing attachment." );
         }
@@ -477,7 +474,7 @@ public class ModuleSetAssemblyPhaseTest
 
         ResolvedModuleSet ms = ResolvedModuleSet.empty().withArtifacts( Collections.<Artifact>emptySet() );
 
-        createPhase( logger, null ).addModuleBinaries( ms, binaries, projects, macTask.archiver, macTask.configSource );
+        createPhase( logger, null ).addModuleBinaries( null, ms, binaries, projects, macTask.archiver, macTask.configSource );
 
         mm.verifyAll();
     }

@@ -29,6 +29,7 @@ import org.apache.maven.plugin.assembly.format.AssemblyFormattingException;
 import org.apache.maven.plugin.assembly.format.ReaderFormatter;
 import org.apache.maven.plugin.assembly.model.DependencySet;
 import org.apache.maven.plugin.assembly.model.UnpackOptions;
+import org.apache.maven.plugin.assembly.resolved.ResolvedDependencySet;
 import org.apache.maven.plugin.assembly.utils.AssemblyFormatUtils;
 import org.apache.maven.plugin.assembly.utils.FilterUtils;
 import org.apache.maven.plugin.assembly.utils.TypeConversionUtils;
@@ -65,7 +66,7 @@ public class AddDependencySetsTask
         NON_ARCHIVE_DEPENDENCY_TYPES = Collections.unmodifiableList( nonArch );
     }
 
-    private final List<DependencySet> dependencySets;
+    private final List<ResolvedDependencySet> dependencySets;
 
     private final Logger logger;
 
@@ -81,14 +82,10 @@ public class AddDependencySetsTask
 
     private Artifact moduleArtifact;
 
-    private final Set<Artifact> resolvedArtifacts;
-
-
-    public AddDependencySetsTask( final List<DependencySet> dependencySets, final Set<Artifact> resolvedArtifacts,
-                                  final MavenProject project, final MavenProjectBuilder projectBuilder, final Logger logger )
+    public AddDependencySetsTask( final List<ResolvedDependencySet> dependencySets, final MavenProject project, final MavenProjectBuilder projectBuilder,
+                                  final Logger logger )
     {
         this.dependencySets = dependencySets;
-        this.resolvedArtifacts = resolvedArtifacts;
         this.project = project;
         this.projectBuilder = projectBuilder;
         this.logger = logger;
@@ -110,42 +107,43 @@ public class AddDependencySetsTask
             logger.debug( "Project " + project.getId() + " has no dependencies. Skipping dependency set addition." );
         }
 
-        for ( final DependencySet dependencySet : dependencySets )
+        for ( final ResolvedDependencySet dependencySet : dependencySets )
         {
             addDependencySet( dependencySet, archiver, configSource );
         }
     }
 
-    void addDependencySet( final DependencySet dependencySet, final Archiver archiver,
+    void addDependencySet( final ResolvedDependencySet dependencySet, final Archiver archiver,
                            final AssemblerConfigurationSource configSource )
         throws AssemblyFormattingException, ArchiveCreationException, InvalidAssemblerConfigurationException
     {
-        logger.debug( "Processing DependencySet (output=" + dependencySet.getOutputDirectory() + ")" );
+        logger.debug( "Processing DependencySet (output=" + dependencySet.getDependencySet().getOutputDirectory() + ")" );
+        Set<Artifact> dependencySetArtifacts = dependencySet.getArtifacts();
 
-        if ( !dependencySet.isUseTransitiveDependencies() && dependencySet.isUseTransitiveFiltering() )
+        if ( !dependencySet.getDependencySet().isUseTransitiveDependencies() && dependencySet.getDependencySet().isUseTransitiveFiltering() )
         {
             logger.warn( "DependencySet has nonsensical configuration: useTransitiveDependencies == false "
                 + "AND useTransitiveFiltering == true. Transitive filtering flag will be ignored." );
         }
 
-        final Set<Artifact> dependencyArtifacts = resolveDependencyArtifacts( dependencySet );
+        final Set<Artifact> dependencyArtifacts = resolveDependencyArtifacts( dependencySet.getDependencySet(), dependencySetArtifacts);
 
-        final UnpackOptions opts = dependencySet.getUnpackOptions();
-        if ( dependencySet.isUnpack() && opts != null && ( opts.isFiltered() || opts.getLineEnding() != null ) )
+        final UnpackOptions opts = dependencySet.getDependencySet().getUnpackOptions();
+        if ( dependencySet.getDependencySet().isUnpack() && opts != null && ( opts.isFiltered() || opts.getLineEnding() != null ) )
         {
             // find out if we can just ditch this empty block
         }
         else if ( dependencyArtifacts.size() > 1 )
         {
-            checkMultiArtifactOutputConfig( dependencySet );
+            checkMultiArtifactOutputConfig( dependencySet.getDependencySet() );
         }
 
         logger.debug( "Adding " + dependencyArtifacts.size() + " dependency artifacts." );
 
         InputStreamTransformer fileSetTransformers =
-            dependencySet.isUnpack() && dependencySet.getUnpackOptions() != null
-                ? ReaderFormatter.getFileSetTransformers( configSource, dependencySet.getUnpackOptions().isFiltered(),
-                                                          dependencySet.getUnpackOptions().getLineEnding() )
+            dependencySet.getDependencySet().isUnpack() && dependencySet.getDependencySet().getUnpackOptions() != null
+                ? ReaderFormatter.getFileSetTransformers( configSource, dependencySet.getDependencySet().getUnpackOptions().isFiltered(),
+                                                          dependencySet.getDependencySet().getUnpackOptions().getLineEnding() )
                 : null;
 
 
@@ -168,11 +166,11 @@ public class AddDependencySetsTask
 
             if ( NON_ARCHIVE_DEPENDENCY_TYPES.contains( depArtifact.getType() ) )
             {
-                addNonArchiveDependency( depArtifact, depProject, dependencySet, archiver, configSource );
+                addNonArchiveDependency( depArtifact, depProject, dependencySet.getDependencySet(), archiver, configSource );
             }
             else
             {
-                addNormalArtifact( dependencySet, depArtifact, depProject, archiver, configSource, fileSetTransformers );
+                addNormalArtifact( dependencySet.getDependencySet(), depArtifact, depProject, archiver, configSource, fileSetTransformers );
             }
         }
     }
@@ -257,7 +255,7 @@ public class AddDependencySetsTask
         return project;
     }
 
-    Set<Artifact> resolveDependencyArtifacts( final DependencySet dependencySet )
+    Set<Artifact> resolveDependencyArtifacts( final DependencySet dependencySet, Set<Artifact> resolvedArtifacts )
         throws InvalidAssemblerConfigurationException
     {
         final Set<Artifact> dependencyArtifacts = new LinkedHashSet<Artifact>();
@@ -369,7 +367,12 @@ public class AddDependencySetsTask
 
     public List<DependencySet> getDependencySets()
     {
-        return dependencySets;
+        List<DependencySet> result = new ArrayList<DependencySet>(  );
+        for ( ResolvedDependencySet dependencySet : dependencySets )
+        {
+            result.add( dependencySet.getDependencySet());
+        }
+        return result;
     }
 
     public Logger getLogger()

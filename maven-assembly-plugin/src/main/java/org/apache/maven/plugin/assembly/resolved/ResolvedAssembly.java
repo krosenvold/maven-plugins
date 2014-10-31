@@ -41,19 +41,22 @@ public class ResolvedAssembly
 
     private final List<ResolvedModuleSet> resolvedModuleSets;
 
+    private final List<ResolvedDependencySet> resolvedDependencySets;
+
     private final Set<Artifact> dependencySetArtifacts;
 
     private ResolvedAssembly( Assembly assembly, List<ResolvedModuleSet> resolvedModuleSets,
-                              Set<Artifact> dependencySetArtifacts )
+                              List<ResolvedDependencySet> resolvedDependencySets, Set<Artifact> dependencySetArtifacts )
     {
         this.assembly = assembly;
         this.resolvedModuleSets = resolvedModuleSets;
+        this.resolvedDependencySets = resolvedDependencySets;
         this.dependencySetArtifacts = dependencySetArtifacts;
     }
 
     public static ResolvedAssembly create( Assembly assembly )
     {
-        return new ResolvedAssembly( assembly, null, null );
+        return new ResolvedAssembly( assembly, null, null, null );
     }
 
     public ResolvedAssembly withResolvedModuleSets( Iterable<ResolvedModuleSet> resolvedModuleSets )
@@ -63,8 +66,20 @@ public class ResolvedAssembly
         {
             resolvedModuleSets1.add( resolvedModuleSet );
         }
-        return new ResolvedAssembly( assembly, resolvedModuleSets1, dependencySetArtifacts );
+        return new ResolvedAssembly( assembly, resolvedModuleSets1, resolvedDependencySets, dependencySetArtifacts );
     }
+
+    public ResolvedAssembly withResolvedDependencySets( Iterable<ResolvedDependencySet> resolvedDependencySets )
+    {
+        List<ResolvedDependencySet> resolvedDeps = new ArrayList<ResolvedDependencySet>();
+        for ( ResolvedDependencySet resolvedModuleSet : resolvedDependencySets )
+        {
+            resolvedDeps.add( resolvedModuleSet );
+        }
+        return new ResolvedAssembly( assembly, this.resolvedModuleSets, resolvedDeps, dependencySetArtifacts );
+    }
+
+
 
     public void forEachResolvedModule( ResolvedModuleSetConsumer resolvedModuleSetConsumer )
         throws ArchiveCreationException, AssemblyFormattingException, InvalidAssemblerConfigurationException
@@ -73,7 +88,7 @@ public class ResolvedAssembly
             return;
         for ( ResolvedModuleSet resolvedModuleSet : resolvedModuleSets )
         {
-            resolvedModuleSetConsumer.accept( resolvedModuleSet );
+            resolvedModuleSetConsumer.accept( this, resolvedModuleSet );
         }
     }
 
@@ -85,6 +100,11 @@ public class ResolvedAssembly
     public List<DependencySet> getDependencySets()
     {
         return assembly.getDependencySets();
+    }
+
+    public List<ResolvedDependencySet> getResolvedDependencySets()
+    {
+        return resolvedDependencySets;
     }
 
     public List<FileItem> getFiles()
@@ -104,6 +124,6 @@ public class ResolvedAssembly
 
     public ResolvedAssembly withDependencySetArtifacts( final Set<Artifact> dependencySetArtifacts )
     {
-        return new ResolvedAssembly( assembly, resolvedModuleSets, dependencySetArtifacts );
+        return new ResolvedAssembly( assembly, resolvedModuleSets, resolvedDependencySets, dependencySetArtifacts );
     }
 }

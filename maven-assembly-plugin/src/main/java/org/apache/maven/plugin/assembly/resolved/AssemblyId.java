@@ -23,14 +23,14 @@ import org.apache.maven.plugin.assembly.model.Assembly;
 
 public class AssemblyId
 {
-    private final String id;
+    private final java.lang.String id;
 
-    private AssemblyId( String id )
+    private AssemblyId( java.lang.String id )
     {
         this.id = id;
     }
 
-    public static AssemblyId createAssemblyId( String id )
+    public static AssemblyId createAssemblyId( java.lang.String id )
     {
         return new AssemblyId( id );
     }
@@ -41,7 +41,7 @@ public class AssemblyId
     }
 
     @Override
-    public String toString()
+    public java.lang.String toString()
     {
         return id;
     }

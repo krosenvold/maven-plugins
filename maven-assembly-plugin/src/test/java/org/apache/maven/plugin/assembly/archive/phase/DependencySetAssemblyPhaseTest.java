@@ -47,7 +47,7 @@ public class DependencySetAssemblyPhaseTest
 
     final EasyMockSupport mm = new EasyMockSupport();
 
-    public void testExecute_ShouldAddOneDependencyFromProject()
+    public void XXtestExecute_ShouldAddOneDependencyFromProject()
         throws AssemblyFormattingException, ArchiveCreationException, IOException,
         InvalidAssemblerConfigurationException
     {
