@@ -43,8 +43,10 @@ import org.apache.maven.plugin.assembly.format.AssemblyFormattingException;
 import org.apache.maven.plugin.assembly.interpolation.AssemblyExpressionEvaluator;
 import org.apache.maven.plugin.assembly.model.Assembly;
 import org.apache.maven.plugin.assembly.model.ContainerDescriptorHandlerConfig;
+import org.apache.maven.plugin.assembly.model.DependencySet;
 import org.apache.maven.plugin.assembly.model.ModuleSet;
 import org.apache.maven.plugin.assembly.resolved.ResolvedAssembly;
+import org.apache.maven.plugin.assembly.resolved.ResolvedDependencySet;
 import org.apache.maven.plugin.assembly.resolved.ResolvedModuleSet;
 import org.apache.maven.plugin.assembly.utils.AssemblyFileUtils;
 import org.apache.maven.plugin.assembly.utils.AssemblyFormatUtils;
@@ -174,6 +176,12 @@ public class DefaultAssemblyArchiver
                 resolvedModuleSets.add( dependencyResolver.resolve( assembly, moduleSet, configSource ) );
             }
 
+            List<ResolvedDependencySet> resolvedDependencySets = new ArrayList<ResolvedDependencySet>();
+            for ( DependencySet dependencySet : assembly.getDependencySets() )
+            {
+                resolvedDependencySets.add( dependencyResolver.resolve( dependencySet, configSource, assembly.getRepositories() ) );
+            }
+
             // OK, this piece of code contains all the stuff left after I extracted resolvedModuleSets.
             // this can probably be simplified quite a lot, since the module sets now have their
             // own artifact resolution.
@@ -181,7 +189,7 @@ public class DefaultAssemblyArchiver
 
             // CHECKSTYLE_OFF: LineLength
             final ResolvedAssembly resolvedAssembly =
-                ResolvedAssembly.create( assembly ).withResolvedModuleSets( resolvedModuleSets ).withDependencySetArtifacts( dependencySetArtifacts );
+                ResolvedAssembly.create( assembly ).withResolvedModuleSets( resolvedModuleSets ).withResolvedDependencySets( resolvedDependencySets ).withDependencySetArtifacts( dependencySetArtifacts );
             // CHECKSTYLE_ON: LineLength
 
             for ( AssemblyArchiverPhase phase : assemblyPhases )

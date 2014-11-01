@@ -23,6 +23,7 @@ import org.apache.maven.plugin.assembly.AssemblerConfigurationSource;
 import org.apache.maven.plugin.assembly.InvalidAssemblerConfigurationException;
 import org.apache.maven.plugin.assembly.archive.ArchiveCreationException;
 import org.apache.maven.plugin.assembly.archive.task.AddDependencySetsTask;
+import org.apache.maven.plugin.assembly.artifact.DependencyResolver;
 import org.apache.maven.plugin.assembly.format.AssemblyFormattingException;
 import org.apache.maven.plugin.assembly.resolved.ResolvedAssembly;
 import org.apache.maven.project.MavenProjectBuilder;
@@ -50,6 +51,10 @@ public class DependencySetAssemblyPhase
     @Requirement
     private ArchiverManager archiverManager;
 
+    @Requirement
+    private DependencyResolver dependencyResolver;
+
+
     /**
      * Default constructor.
      */
@@ -76,8 +81,7 @@ public class DependencySetAssemblyPhase
         throws ArchiveCreationException, AssemblyFormattingException, InvalidAssemblerConfigurationException
     {
         final AddDependencySetsTask task =
-            new AddDependencySetsTask( assembly.getDependencySets(), assembly.getResolvedDependencySetArtifacts(),
-                                       configSource.getProject(), projectBuilder, getLogger() );
+            new AddDependencySetsTask( assembly.getResolvedDependencySets(), configSource.getProject(), projectBuilder, getLogger() );
 
         task.execute( archiver, configSource );
     }

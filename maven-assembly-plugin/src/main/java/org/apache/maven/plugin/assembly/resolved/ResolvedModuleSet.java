@@ -30,20 +30,24 @@ public class ResolvedModuleSet
 
     private final Set<Artifact> artifacts;
 
-    private ResolvedModuleSet( ModuleSet moduleSet, Set<Artifact> artifacts )
+    private final ResolvedBinaries resolvedBinaries;
+
+    private ResolvedModuleSet( ModuleSet moduleSet, Set<Artifact> artifacts,
+                               ResolvedBinaries resolvedBinaries )
     {
         this.moduleSet = moduleSet;
         this.artifacts = artifacts;
+        this.resolvedBinaries = resolvedBinaries;
     }
 
     public static ResolvedModuleSet createResolvedModuleSet( ModuleSet moduleSet )
     {
-        return new ResolvedModuleSet( moduleSet, null );
+        return new ResolvedModuleSet( moduleSet, null, null );
     }
 
     public static ResolvedModuleSet empty()
     {
-        return new ResolvedModuleSet( null, null );
+        return new ResolvedModuleSet( null, null, null );
     }
 
     public ModuleSet getModuleSet()
@@ -51,9 +55,19 @@ public class ResolvedModuleSet
         return moduleSet;
     }
 
+    public ResolvedBinaries getResolvedBinaries()
+    {
+        return resolvedBinaries;
+    }
+
     public ResolvedModuleSet withArtifacts( Set<Artifact> artifacts )
     {
-        return new ResolvedModuleSet( moduleSet, artifacts );
+        return new ResolvedModuleSet( moduleSet, artifacts, resolvedBinaries );
+    }
+
+    public ResolvedModuleSet withResolvedDependencySets(  ResolvedBinaries resolvedBinaries )
+    {
+        return new ResolvedModuleSet( moduleSet, artifacts, resolvedBinaries );
     }
 
     public Set<Artifact> getArtifacts()

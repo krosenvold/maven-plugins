@@ -40,14 +40,18 @@ import org.apache.maven.plugin.assembly.archive.ArchiveCreationException;
 import org.apache.maven.plugin.assembly.archive.task.AddArtifactTask;
 import org.apache.maven.plugin.assembly.archive.task.AddDependencySetsTask;
 import org.apache.maven.plugin.assembly.archive.task.AddFileSetsTask;
+import org.apache.maven.plugin.assembly.artifact.DependencyResolutionException;
+import org.apache.maven.plugin.assembly.artifact.DependencyResolver;
 import org.apache.maven.plugin.assembly.format.AssemblyFormattingException;
-import org.apache.maven.plugin.assembly.format.ReaderFormatter;
 import org.apache.maven.plugin.assembly.model.DependencySet;
 import org.apache.maven.plugin.assembly.model.FileSet;
 import org.apache.maven.plugin.assembly.model.ModuleBinaries;
 import org.apache.maven.plugin.assembly.model.ModuleSet;
 import org.apache.maven.plugin.assembly.model.ModuleSources;
+import org.apache.maven.plugin.assembly.model.Repository;
 import org.apache.maven.plugin.assembly.resolved.ResolvedAssembly;
+import org.apache.maven.plugin.assembly.resolved.ResolvedBinaries;
+import org.apache.maven.plugin.assembly.resolved.ResolvedDependencySet;
 import org.apache.maven.plugin.assembly.resolved.ResolvedModuleSet;
 import org.apache.maven.plugin.assembly.resolved.functions.ResolvedModuleSetConsumer;
 import org.apache.maven.plugin.assembly.utils.AssemblyFormatUtils;
@@ -60,7 +64,6 @@ import org.codehaus.plexus.archiver.Archiver;
 import org.codehaus.plexus.archiver.manager.ArchiverManager;
 import org.codehaus.plexus.component.annotations.Component;
 import org.codehaus.plexus.component.annotations.Requirement;
-import org.codehaus.plexus.components.io.functions.InputStreamTransformer;
 import org.codehaus.plexus.logging.AbstractLogEnabled;
 import org.codehaus.plexus.logging.Logger;
 
@@ -86,6 +89,10 @@ public class ModuleSetAssemblyPhase
 
     @Requirement
     private ArchiverManager archiverManager;
+
+    @Requirement
+    private DependencyResolver dependencyResolver;
+
 
     /**
      * Create an instance.
@@ -114,7 +121,7 @@ public class ModuleSetAssemblyPhase
     {
         assembly.forEachResolvedModule( new ResolvedModuleSetConsumer()
         {
-            public void accept( ResolvedModuleSet resolvedModule )
+            public void accept( ResolvedAssembly assembly, ResolvedModuleSet resolvedModule )
                 throws ArchiveCreationException, AssemblyFormattingException, InvalidAssemblerConfigurationException
             {
                 validate( resolvedModule.getModuleSet(), configSource );
@@ -125,8 +132,7 @@ public class ModuleSetAssemblyPhase
                 final ModuleSources sources = resolvedModule.getModuleSet().getSources();
                 addModuleSourceFileSets( sources, moduleProjects, archiver, configSource );
 
-                final ModuleBinaries binaries = resolvedModule.getModuleSet().getBinaries();
-                addModuleBinaries( resolvedModule, binaries, moduleProjects, archiver, configSource );
+                addModuleBinaries( assembly.getRepositories(), resolvedModule, resolvedModule.getResolvedBinaries(), moduleProjects, archiver, configSource );
             }
         } );
     }
@@ -172,7 +178,7 @@ public class ModuleSetAssemblyPhase
         }
     }
 
-    void addModuleBinaries( ResolvedModuleSet resolvedModule, final ModuleBinaries binaries,
+    void addModuleBinaries( List<Repository> repositories, ResolvedModuleSet resolvedModule, final ResolvedBinaries binaries,
                             final Set<MavenProject> projects, final Archiver archiver,
                             final AssemblerConfigurationSource configSource )
         throws ArchiveCreationException, AssemblyFormattingException, InvalidAssemblerConfigurationException
@@ -199,7 +205,7 @@ public class ModuleSetAssemblyPhase
         }
 
 
-        final String classifier = binaries.getAttachmentClassifier();
+        final String classifier = binaries.getBinaries().getAttachmentClassifier();
 
         final Map<MavenProject, Artifact> chosenModuleArtifacts = new HashMap<MavenProject, Artifact>();
 
@@ -241,17 +247,17 @@ public class ModuleSetAssemblyPhase
             }
 
             chosenModuleArtifacts.put( project, artifact );
-            addModuleArtifact( artifact, project, archiver, configSource, binaries );
+            addModuleArtifact( artifact, project, archiver, configSource, binaries.getBinaries() );
         }
 
-        final List<DependencySet> depSets = getDependencySets( binaries );
+        final List<ResolvedDependencySet> possiblyImplied = binaries.getResolvedDependencySets();
 
-        if ( depSets != null )
+        if ( possiblyImplied != null )
         {
-            for ( final DependencySet ds : depSets )
+            for ( final ResolvedDependencySet ds : possiblyImplied )
             {
                 // NOTE: Disabling useProjectArtifact flag, since module artifact has already been handled!
-                ds.setUseProjectArtifact( false );
+                ds.getDependencySet().setUseProjectArtifact( false );
             }
 
             // TODO: The following should be moved into a shared component, cause this
@@ -276,14 +282,26 @@ public class ModuleSetAssemblyPhase
             {
                 getLogger().debug( "Processing binary dependencies for module project: " + moduleProject.getId() );
 
+/*                List<ResolvedDependencySet> rds = new ArrayList<ResolvedDependencySet>();
+                for ( DependencySet dependencySet : possiblyImplied )
+                {
+                    try
+                    {
+                        rds.add( dependencyResolver.resolve( dependencySet, configSource, repositories ) );
+                    }
+                    catch ( DependencyResolutionException e )
+                    {
+                        throw new ArchiveCreationException("Resolving dependencies", e);
+                    }
+                }
+*/
                 final AddDependencySetsTask task =
-                    new AddDependencySetsTask( depSets, resolvedModule.getArtifacts(), moduleProject, projectBuilder,
-                                               getLogger() );
+                    new AddDependencySetsTask( ds, moduleProject, projectBuilder, getLogger() );
 
                 task.setModuleProject( moduleProject );
                 task.setModuleArtifact( chosenModuleArtifacts.get( moduleProject ) );
-                task.setDefaultOutputDirectory( binaries.getOutputDirectory() );
-                task.setDefaultOutputFileNameMapping( binaries.getOutputFileNameMapping() );
+                task.setDefaultOutputDirectory( binaries.getBinaries().getOutputDirectory() );
+                task.setDefaultOutputFileNameMapping( binaries.getBinaries(). getOutputFileNameMapping() );
 
                 task.execute( archiver, configSource );
             }
@@ -316,16 +334,7 @@ public class ModuleSetAssemblyPhase
 
         if ( ( ( depSets == null ) || depSets.isEmpty() ) && binaries.isIncludeDependencies() )
         {
-            final DependencySet impliedDependencySet = new DependencySet();
-
-            impliedDependencySet.setOutputDirectory( binaries.getOutputDirectory() );
-            impliedDependencySet.setOutputFileNameMapping( binaries.getOutputFileNameMapping() );
-            impliedDependencySet.setFileMode( binaries.getFileMode() );
-            impliedDependencySet.setDirectoryMode( binaries.getDirectoryMode() );
-            impliedDependencySet.setExcludes( binaries.getExcludes() );
-            impliedDependencySet.setIncludes( binaries.getIncludes() );
-            impliedDependencySet.setUnpack( binaries.isUnpack() );
-            // unpackOptions is handled in the first stage of dependency-set handling, below.
+            final DependencySet impliedDependencySet = getImpliedDependencySet( binaries );
 
             depSets = Collections.singletonList( impliedDependencySet );
         }
@@ -333,27 +342,21 @@ public class ModuleSetAssemblyPhase
         return depSets;
     }
 
-    // protected List<String> collectExcludesFromQueuedArtifacts( final Set visitedArtifacts, final List binaryExcludes
-    // )
-    // {
-    // List excludes = binaryExcludes;
-    //
-    // if ( excludes == null )
-    // {
-    // excludes = new ArrayList();
-    // }
-    // else
-    // {
-    // excludes = new ArrayList( excludes );
-    // }
-    //
-    // for ( final Iterator it = visitedArtifacts.iterator(); it.hasNext(); )
-    // {
-    // excludes.add( it.next() );
-    // }
-    //
-    // return excludes;
-    // }
+    private static DependencySet getImpliedDependencySet( ModuleBinaries binaries )
+    {
+        final DependencySet impliedDependencySet = new DependencySet();
+
+        impliedDependencySet.setOutputDirectory( binaries.getOutputDirectory() );
+        impliedDependencySet.setOutputFileNameMapping( binaries.getOutputFileNameMapping() );
+        impliedDependencySet.setFileMode( binaries.getFileMode() );
+        impliedDependencySet.setDirectoryMode( binaries.getDirectoryMode() );
+        impliedDependencySet.setExcludes( binaries.getExcludes() );
+        impliedDependencySet.setIncludes( binaries.getIncludes() );
+        impliedDependencySet.setUnpack( binaries.isUnpack() );
+        // unpackOptions is handled in the first stage of dependency-set handling, below.
+        return impliedDependencySet;
+    }
+
 
     void addModuleArtifact( final Artifact artifact, final MavenProject project, final Archiver archiver,
                             final AssemblerConfigurationSource configSource, final ModuleBinaries binaries )

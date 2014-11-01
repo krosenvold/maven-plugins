@@ -22,9 +22,13 @@ package org.apache.maven.plugin.assembly.artifact;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.assembly.AssemblerConfigurationSource;
 import org.apache.maven.plugin.assembly.model.Assembly;
+import org.apache.maven.plugin.assembly.model.DependencySet;
 import org.apache.maven.plugin.assembly.model.ModuleSet;
+import org.apache.maven.plugin.assembly.model.Repository;
+import org.apache.maven.plugin.assembly.resolved.ResolvedDependencySet;
 import org.apache.maven.plugin.assembly.resolved.ResolvedModuleSet;
 
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -42,7 +46,10 @@ public interface DependencyResolver
     Set<Artifact> resolve( Assembly assembly, AssemblerConfigurationSource configSource )
         throws DependencyResolutionException;
 
-    ResolvedModuleSet resolve( final Assembly assembly, ModuleSet moduleSet,
-                           final AssemblerConfigurationSource configSource )
+    ResolvedModuleSet resolve( final Assembly assembly, ModuleSet moduleSet, final AssemblerConfigurationSource configSource )
         throws DependencyResolutionException;
+
+    ResolvedDependencySet resolve( final DependencySet dependencySet, final AssemblerConfigurationSource configSource, List<Repository> repositories )
+        throws DependencyResolutionException;
+
 }

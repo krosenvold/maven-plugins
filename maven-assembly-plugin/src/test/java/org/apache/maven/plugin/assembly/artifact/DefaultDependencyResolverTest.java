@@ -102,7 +102,7 @@ public class DefaultDependencyResolverTest
         final Assembly assembly = new Assembly();
         new DefaultDependencyResolver( resolver, metadataSource, factory, logger ).updateDependencySetResolutionRequirements(
             depSets,
-                info, AssemblyId.createAssemblyId( assembly),
+                info, AssemblyId.createAssemblyId( assembly ),
                 project);
 
         assertTrue( info.isResolutionRequired() );
@@ -574,7 +574,7 @@ public class DefaultDependencyResolverTest
     // mm.verifyAll();
     // }
 
-    private void assertRepositoryWithId( final String repoId, final List<ArtifactRepository> repos,
+    private void assertRepositoryWithId( final java.lang.String repoId, final List<ArtifactRepository> repos,
                                          final boolean shouldExist )
     {
         if ( ( repos == null || repos.isEmpty() ) )
@@ -605,7 +605,7 @@ public class DefaultDependencyResolverTest
         }
     }
 
-    private MavenProject createMavenProject( final String groupId, final String artifactId, final String version,
+    private MavenProject createMavenProject( final java.lang.String groupId, final java.lang.String artifactId, final java.lang.String version,
                                              final File basedir )
     {
         final Model model = new Model();
