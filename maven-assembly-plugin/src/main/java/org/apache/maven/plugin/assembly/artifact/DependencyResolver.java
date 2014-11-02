@@ -53,5 +53,10 @@ public interface DependencyResolver
                                                                     List<DependencySet> dependencySets )
         throws DependencyResolutionException
     ;
+    public Map<DependencySet, Set<Artifact>> resolveDependencySets( final Assembly assembly,
+                                                                    final AssemblerConfigurationSource configSource,
+                                                                    List<DependencySet> dependencySets )
+        throws DependencyResolutionException
+        ;
 
 }

@@ -207,6 +207,53 @@ public class DefaultDependencyResolver
         return result;
     }
 
+    public Map<DependencySet, Set<Artifact>> resolveDependencySets( final Assembly assembly,
+                                                                    final AssemblerConfigurationSource configSource,
+                                                                    List<DependencySet> dependencySets )
+        throws DependencyResolutionException
+    {
+        Map<DependencySet, Set<Artifact>> result = new LinkedHashMap<DependencySet, Set<Artifact>>();
+
+        for ( DependencySet dependencySet : dependencySets )
+        {
+
+            final MavenProject currentProject = configSource.getProject();
+
+            final ResolutionManagementInfo info = new ResolutionManagementInfo( currentProject );
+            updateRepositoryResolutionRequirements( assembly, info );
+            final AssemblyId assemblyId = AssemblyId.createAssemblyId( assembly );
+            updateDependencySetResolutionRequirements( assembly.getDependencySets(), info, assemblyId, currentProject );
+
+            Set<Artifact> artifacts;
+            if ( info.isResolutionRequired() )
+            {
+                final List<ArtifactRepository> repos =
+                    aggregateRemoteArtifactRepositories( configSource.getRemoteRepositories(),
+                                                         info.getEnabledProjects() );
+
+                artifacts = info.getArtifacts();
+                if ( info.isResolvedTransitively() )
+                {
+                    getLogger().debug( "Resolving project dependencies transitively." );
+                    artifacts = resolveTransitively( artifacts, repos, info, configSource );
+                }
+                else
+                {
+                    getLogger().debug(
+                        "Resolving project dependencies ONLY. Transitive dependencies WILL NOT be included in the results." );
+                    artifacts = resolveNonTransitively( assembly, artifacts, configSource, repos );
+                }
+            }
+            else
+            {
+                artifacts = new HashSet<Artifact>();
+            }
+            result.put( dependencySet, artifacts );
+
+        }
+        return result;
+    }
+
     Set<Artifact> resolveNonTransitively( final Assembly assembly, final Set<Artifact> dependencyArtifacts,
                                           final AssemblerConfigurationSource configSource,
                                           final List<ArtifactRepository> repos )

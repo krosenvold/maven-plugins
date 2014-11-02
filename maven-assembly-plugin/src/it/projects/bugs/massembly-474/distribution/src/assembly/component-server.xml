@@ -1,0 +1,28 @@
+<component xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/component/1.1.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/component/1.1.2 http://maven.apache.org/xsd/component-1.1.2.xsd">
+	<moduleSets>
+		<moduleSet>
+			<useAllReactorProjects>true</useAllReactorProjects>
+			<includes>
+				<include>maven-assembly-test:modul-server</include>
+			</includes>
+			<binaries>
+				<unpack>false</unpack>
+				<includeDependencies>true</includeDependencies>
+				<outputFileNameMapping>server/lib/${module.artifactId}.${module.extension}</outputFileNameMapping>
+				<dependencySets>
+					<!-- Bibliotheken -->
+					<dependencySet>
+						<outputDirectory>server/lib</outputDirectory>
+						<useProjectArtifact>false</useProjectArtifact>
+						<useTransitiveDependencies>true</useTransitiveDependencies>
+						<!--
+						<useStrictFiltering>true</useStrictFiltering>
+						<useTransitiveFiltering>true</useTransitiveFiltering>
+						 -->
+					</dependencySet>
+				</dependencySets>
+			</binaries>
+		</moduleSet>
+	</moduleSets>
+</component>
