@@ -26,7 +26,8 @@ import org.apache.maven.plugin.assembly.archive.ArchiveCreationException;
 import org.apache.maven.plugin.assembly.archive.task.AddFileSetsTask;
 import org.apache.maven.plugin.assembly.format.AssemblyFormattingException;
 import org.apache.maven.plugin.assembly.model.FileSet;
-import org.apache.maven.plugin.assembly.resolved.ResolvedAssembly;
+import org.apache.maven.plugin.assembly.wrappers.WrappedAssembly;
+import org.apache.maven.plugin.assembly.wrappers.WrappedFileSet;
 import org.codehaus.plexus.archiver.Archiver;
 import org.codehaus.plexus.component.annotations.Component;
 import org.codehaus.plexus.logging.AbstractLogEnabled;
@@ -47,11 +48,11 @@ public class FileSetAssemblyPhase
     /**
      * {@inheritDoc}
      */
-    public void execute( @Nonnull final ResolvedAssembly assembly, final Archiver archiver,
+    public void execute( @Nonnull final WrappedAssembly assembly, final Archiver archiver,
                          final AssemblerConfigurationSource configSource )
         throws ArchiveCreationException, AssemblyFormattingException
     {
-        final List<FileSet> fileSets = assembly.getFileSets();
+        final List<WrappedFileSet> fileSets = assembly.getFileSets();
 
         if ( ( fileSets != null ) && !fileSets.isEmpty() )
         {

@@ -47,6 +47,11 @@ import org.apache.maven.plugin.assembly.model.Repository;
 import org.apache.maven.plugin.assembly.resolved.AssemblyId;
 import org.apache.maven.plugin.assembly.resolved.ResolvedModuleSet;
 import org.apache.maven.plugin.assembly.utils.FilterUtils;
+import org.apache.maven.plugin.assembly.wrappers.WrappedAssembly;
+import org.apache.maven.plugin.assembly.wrappers.WrappedDependencySet;
+import org.apache.maven.plugin.assembly.wrappers.WrappedModuleBinaries;
+import org.apache.maven.plugin.assembly.wrappers.WrappedModuleSet;
+import org.apache.maven.plugin.assembly.wrappers.WrappedRepository;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.artifact.InvalidDependencyVersionException;
 import org.codehaus.plexus.component.annotations.Component;
@@ -88,7 +93,7 @@ public class DefaultDependencyResolver
         enableLogging( logger );
     }
 
-    public Set<Artifact> resolve( final Assembly assembly, final AssemblerConfigurationSource configSource )
+    public Set<Artifact> resolve( final WrappedAssembly assembly, final AssemblerConfigurationSource configSource )
         throws DependencyResolutionException
     {
         final MavenProject currentProject = configSource.getProject();
@@ -121,8 +126,8 @@ public class DefaultDependencyResolver
         return artifacts;
     }
 
-    public ResolvedModuleSet resolve( final Assembly assembly, ModuleSet moduleSet,
-                                      final AssemblerConfigurationSource configSource )
+    public Set<Artifact> resolve( final WrappedAssembly assembly, WrappedModuleSet moduleSet,
+                                     final AssemblerConfigurationSource configSource )
         throws DependencyResolutionException
     {
         final MavenProject currentProject = configSource.getProject();
@@ -133,10 +138,9 @@ public class DefaultDependencyResolver
         updateDependencySetResolutionRequirements( assembly.getDependencySets(), info, assemblyId, currentProject );
         updateModuleSetResolutionRequirements( assemblyId, moduleSet, info, configSource );
 
-        ResolvedModuleSet base = ResolvedModuleSet.createResolvedModuleSet( moduleSet );
         if ( !info.isResolutionRequired() )
         {
-            return base.withArtifacts( new HashSet<Artifact>() );
+            return new HashSet<Artifact>();
         }
 
         final List<ArtifactRepository> repos =
@@ -154,10 +158,10 @@ public class DefaultDependencyResolver
             artifacts = resolveNonTransitively( assembly, artifacts, configSource, repos );
         }
 
-        return base.withArtifacts( artifacts );
+        return artifacts;
     }
 
-    Set<Artifact> resolveNonTransitively( final Assembly assembly, final Set<Artifact> dependencyArtifacts,
+    Set<Artifact> resolveNonTransitively( final WrappedAssembly assembly, final Set<Artifact> dependencyArtifacts,
                                           final AssemblerConfigurationSource configSource,
                                           final List<ArtifactRepository> repos )
         throws DependencyResolutionException
@@ -243,14 +247,14 @@ public class DefaultDependencyResolver
         return result.getArtifacts();
     }
 
-    void updateRepositoryResolutionRequirements( final Assembly assembly, final ResolutionManagementInfo requirements )
+    void updateRepositoryResolutionRequirements( final WrappedAssembly assembly, final ResolutionManagementInfo requirements )
     {
-        final List<Repository> repositories = assembly.getRepositories();
+        final List<WrappedRepository> repositories = assembly.getRepositories();
 
         if ( repositories != null && !repositories.isEmpty() )
         {
             requirements.setResolutionRequired( true );
-            for ( final Repository repo : repositories )
+            for ( final WrappedRepository repo : repositories )
             {
                 enableScope( repo.getScope(), requirements );
             }
@@ -273,12 +277,12 @@ public class DefaultDependencyResolver
         }
     }
 
-    void updateModuleSetResolutionRequirements( AssemblyId assemblyId, ModuleSet set,
+    void updateModuleSetResolutionRequirements( AssemblyId assemblyId, WrappedModuleSet set,
                                                 final ResolutionManagementInfo requirements,
                                                 final AssemblerConfigurationSource configSource )
         throws DependencyResolutionException
     {
-        final ModuleBinaries binaries = set.getBinaries();
+        final WrappedModuleBinaries binaries = set.getBinaries();
         if ( binaries != null )
         {
             Set<MavenProject> projects;
@@ -320,9 +324,9 @@ public class DefaultDependencyResolver
     }
 
     @SuppressWarnings( "unchecked" )
-    void updateDependencySetResolutionRequirements( final List<DependencySet> depSets,
+    void updateDependencySetResolutionRequirements( final List<WrappedDependencySet> depSets,
                                                     final ResolutionManagementInfo requirements, AssemblyId assemblyId,
-                                                    final MavenProject... projects )
+                                                    final MavenProject projects )
         throws DependencyResolutionException
     {
         if ( depSets != null && !depSets.isEmpty() )

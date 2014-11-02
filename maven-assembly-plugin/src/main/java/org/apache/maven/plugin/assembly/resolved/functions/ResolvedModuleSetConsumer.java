@@ -23,9 +23,10 @@ import org.apache.maven.plugin.assembly.InvalidAssemblerConfigurationException;
 import org.apache.maven.plugin.assembly.archive.ArchiveCreationException;
 import org.apache.maven.plugin.assembly.format.AssemblyFormattingException;
 import org.apache.maven.plugin.assembly.resolved.ResolvedModuleSet;
+import org.apache.maven.plugin.assembly.wrappers.WrappedModuleSet;
 
 public interface ResolvedModuleSetConsumer
 {
-    void accept( ResolvedModuleSet resolvedModule )
+    void accept( WrappedModuleSet resolvedModule )
         throws ArchiveCreationException, AssemblyFormattingException, InvalidAssemblerConfigurationException;
 }

@@ -20,6 +20,7 @@ package org.apache.maven.plugin.assembly.mojos;
  */
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -38,6 +39,7 @@ import org.apache.maven.plugin.assembly.io.AssemblyReadException;
 import org.apache.maven.plugin.assembly.io.AssemblyReader;
 import org.apache.maven.plugin.assembly.model.Assembly;
 import org.apache.maven.plugin.assembly.utils.AssemblyFormatUtils;
+import org.apache.maven.plugin.assembly.wrappers.WrappedAssembly;
 import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.Parameter;
@@ -428,10 +430,11 @@ public abstract class AbstractAssemblyMojo
             return;
         }
 
-        List<Assembly> assemblies;
+
+        List<Assembly> assemblyList;
         try
         {
-            assemblies = assemblyReader.readAssemblies( this );
+            assemblyList = assemblyReader.readAssemblies( this );
         }
         catch ( final AssemblyReadException e )
         {
@@ -443,11 +446,19 @@ public abstract class AbstractAssemblyMojo
                 + e.getMessage() );
         }
 
+        List<WrappedAssembly> assemblies = new ArrayList<WrappedAssembly>(  );
+        for ( Assembly assembly : assemblyList )
+        {
+            assemblies.add( new WrappedAssembly( assembly ));
+        }
+
+
+
         // TODO: include dependencies marked for distribution under certain formats
         // TODO: how, might we plug this into an installer, such as NSIS?
 
         boolean warnedAboutMainProjectArtifact = false;
-        for ( final Assembly assembly : assemblies )
+        for ( final WrappedAssembly assembly : assemblies )
         {
             try
             {

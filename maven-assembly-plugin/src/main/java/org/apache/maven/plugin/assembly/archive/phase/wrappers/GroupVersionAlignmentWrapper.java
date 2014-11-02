@@ -20,6 +20,7 @@ package org.apache.maven.plugin.assembly.archive.phase.wrappers;
  */
 
 import org.apache.maven.plugin.assembly.model.GroupVersionAlignment;
+import org.apache.maven.plugin.assembly.wrappers.WrappedGroupVersionAlignment;
 
 import java.util.List;
 
@@ -30,12 +31,12 @@ class GroupVersionAlignmentWrapper
     implements org.apache.maven.shared.repository.model.GroupVersionAlignment
 {
 
-    private final GroupVersionAlignment alignment;
+    private final WrappedGroupVersionAlignment alignment;
 
     /**
-     * @param alignment @{link {@link GroupVersionAlignment}
+     * @param alignment @{link {@link org.apache.maven.plugin.assembly.model.GroupVersionAlignment}
      */
-    public GroupVersionAlignmentWrapper( final GroupVersionAlignment alignment )
+    public GroupVersionAlignmentWrapper( final WrappedGroupVersionAlignment alignment )
     {
         this.alignment = alignment;
     }

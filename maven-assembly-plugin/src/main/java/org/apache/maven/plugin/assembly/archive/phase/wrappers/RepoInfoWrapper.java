@@ -21,6 +21,8 @@ package org.apache.maven.plugin.assembly.archive.phase.wrappers;
 
 import org.apache.maven.plugin.assembly.model.GroupVersionAlignment;
 import org.apache.maven.plugin.assembly.model.Repository;
+import org.apache.maven.plugin.assembly.wrappers.WrappedGroupVersionAlignment;
+import org.apache.maven.plugin.assembly.wrappers.WrappedRepository;
 import org.apache.maven.shared.repository.model.RepositoryInfo;
 
 import java.util.ArrayList;
@@ -33,14 +35,14 @@ public class RepoInfoWrapper
     implements RepositoryInfo
 {
 
-    private final Repository repo;
+    private final WrappedRepository repo;
 
     private List<GroupVersionAlignmentWrapper> convertedAlignments;
 
     /**
      * @param repo The {@link Repository}
      */
-    public RepoInfoWrapper( final Repository repo )
+    public RepoInfoWrapper( final WrappedRepository repo )
     {
         this.repo = repo;
     }
@@ -54,14 +56,14 @@ public class RepoInfoWrapper
     /** {@inheritDoc} */
     public List<GroupVersionAlignmentWrapper> getGroupVersionAlignments()
     {
-        final List<GroupVersionAlignment> alignments = repo.getGroupVersionAlignments();
+        final List<WrappedGroupVersionAlignment> alignments = repo.getGroupVersionAlignments();
 
         if ( convertedAlignments == null || alignments.size() != convertedAlignments.size() )
         {
             final List<GroupVersionAlignmentWrapper> l =
                 new ArrayList<GroupVersionAlignmentWrapper>( alignments.size() );
 
-            for ( final GroupVersionAlignment alignment : alignments )
+            for ( final WrappedGroupVersionAlignment alignment : alignments )
             {
                 l.add( new GroupVersionAlignmentWrapper( alignment ) );
             }

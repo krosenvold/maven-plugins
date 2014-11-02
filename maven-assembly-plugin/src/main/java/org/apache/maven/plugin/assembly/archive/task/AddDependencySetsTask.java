@@ -32,6 +32,7 @@ import org.apache.maven.plugin.assembly.model.UnpackOptions;
 import org.apache.maven.plugin.assembly.utils.AssemblyFormatUtils;
 import org.apache.maven.plugin.assembly.utils.FilterUtils;
 import org.apache.maven.plugin.assembly.utils.TypeConversionUtils;
+import org.apache.maven.plugin.assembly.wrappers.WrappedDependencySet;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.MavenProjectBuilder;
 import org.apache.maven.project.ProjectBuildingException;
@@ -65,7 +66,7 @@ public class AddDependencySetsTask
         NON_ARCHIVE_DEPENDENCY_TYPES = Collections.unmodifiableList( nonArch );
     }
 
-    private final List<DependencySet> dependencySets;
+    private final List<WrappedDependencySet> dependencySets;
 
     private final Logger logger;
 
@@ -84,7 +85,7 @@ public class AddDependencySetsTask
     private final Set<Artifact> resolvedArtifacts;
 
 
-    public AddDependencySetsTask( final List<DependencySet> dependencySets, final Set<Artifact> resolvedArtifacts,
+    public AddDependencySetsTask( final List<WrappedDependencySet> dependencySets, final Set<Artifact> resolvedArtifacts,
                                   final MavenProject project, final MavenProjectBuilder projectBuilder, final Logger logger )
     {
         this.dependencySets = dependencySets;
@@ -110,13 +111,13 @@ public class AddDependencySetsTask
             logger.debug( "Project " + project.getId() + " has no dependencies. Skipping dependency set addition." );
         }
 
-        for ( final DependencySet dependencySet : dependencySets )
+        for ( final WrappedDependencySet dependencySet : dependencySets )
         {
             addDependencySet( dependencySet, archiver, configSource );
         }
     }
 
-    void addDependencySet( final DependencySet dependencySet, final Archiver archiver,
+    void addDependencySet( final WrappedDependencySet dependencySet, final Archiver archiver,
                            final AssemblerConfigurationSource configSource )
         throws AssemblyFormattingException, ArchiveCreationException, InvalidAssemblerConfigurationException
     {
@@ -177,7 +178,7 @@ public class AddDependencySetsTask
         }
     }
 
-    private void checkMultiArtifactOutputConfig( final DependencySet dependencySet )
+    private void checkMultiArtifactOutputConfig( final WrappedDependencySet dependencySet )
     {
         String dir = dependencySet.getOutputDirectory();
         if ( dir == null )
@@ -200,7 +201,7 @@ public class AddDependencySetsTask
         }
     }
 
-    private void addNormalArtifact( final DependencySet dependencySet, final Artifact depArtifact,
+    private void addNormalArtifact( final WrappedDependencySet dependencySet, final Artifact depArtifact,
                                     final MavenProject depProject, final Archiver archiver,
                                     final AssemblerConfigurationSource configSource,
                                     InputStreamTransformer fileSetTransformers )
@@ -257,7 +258,7 @@ public class AddDependencySetsTask
         return project;
     }
 
-    Set<Artifact> resolveDependencyArtifacts( final DependencySet dependencySet )
+    Set<Artifact> resolveDependencyArtifacts( final WrappedDependencySet dependencySet )
         throws InvalidAssemblerConfigurationException
     {
         final Set<Artifact> dependencyArtifacts = new LinkedHashSet<Artifact>();
@@ -320,7 +321,7 @@ public class AddDependencySetsTask
     }
 
     void addNonArchiveDependency( final Artifact depArtifact, final MavenProject depProject,
-                                  final DependencySet dependencySet, final Archiver archiver,
+                                  final WrappedDependencySet dependencySet, final Archiver archiver,
                                   final AssemblerConfigurationSource configSource )
         throws AssemblyFormattingException, ArchiveCreationException
     {
@@ -367,7 +368,7 @@ public class AddDependencySetsTask
         }
     }
 
-    public List<DependencySet> getDependencySets()
+    public List<WrappedDependencySet> getDependencySets()
     {
         return dependencySets;
     }

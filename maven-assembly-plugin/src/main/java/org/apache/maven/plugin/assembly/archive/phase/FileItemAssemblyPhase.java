@@ -26,9 +26,9 @@ import org.apache.maven.plugin.assembly.archive.ArchiveCreationException;
 import org.apache.maven.plugin.assembly.format.AssemblyFormattingException;
 import org.apache.maven.plugin.assembly.format.ReaderFormatter;
 import org.apache.maven.plugin.assembly.model.FileItem;
-import org.apache.maven.plugin.assembly.resolved.ResolvedAssembly;
 import org.apache.maven.plugin.assembly.utils.AssemblyFormatUtils;
 import org.apache.maven.plugin.assembly.utils.TypeConversionUtils;
+import org.apache.maven.plugin.assembly.wrappers.WrappedAssembly;
 import org.codehaus.plexus.archiver.Archiver;
 import org.codehaus.plexus.archiver.ArchiverException;
 import org.codehaus.plexus.archiver.util.ArchiverAttributeUtils;
@@ -63,7 +63,7 @@ public class FileItemAssemblyPhase
     /**
      * {@inheritDoc}
      */
-    public void execute( final ResolvedAssembly assembly, final Archiver archiver,
+    public void execute( final WrappedAssembly assembly, final Archiver archiver,
                          final AssemblerConfigurationSource configSource )
         throws ArchiveCreationException, AssemblyFormattingException
     {

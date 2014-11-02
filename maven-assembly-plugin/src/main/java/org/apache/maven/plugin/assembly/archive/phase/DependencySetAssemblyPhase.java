@@ -24,7 +24,7 @@ import org.apache.maven.plugin.assembly.InvalidAssemblerConfigurationException;
 import org.apache.maven.plugin.assembly.archive.ArchiveCreationException;
 import org.apache.maven.plugin.assembly.archive.task.AddDependencySetsTask;
 import org.apache.maven.plugin.assembly.format.AssemblyFormattingException;
-import org.apache.maven.plugin.assembly.resolved.ResolvedAssembly;
+import org.apache.maven.plugin.assembly.wrappers.WrappedAssembly;
 import org.apache.maven.project.MavenProjectBuilder;
 import org.codehaus.plexus.archiver.Archiver;
 import org.codehaus.plexus.archiver.manager.ArchiverManager;
@@ -71,12 +71,12 @@ public class DependencySetAssemblyPhase
     /**
      * {@inheritDoc}
      */
-    public void execute( final ResolvedAssembly assembly, final Archiver archiver,
+    public void execute( final WrappedAssembly assembly, final Archiver archiver,
                          final AssemblerConfigurationSource configSource )
         throws ArchiveCreationException, AssemblyFormattingException, InvalidAssemblerConfigurationException
     {
         final AddDependencySetsTask task =
-            new AddDependencySetsTask( assembly.getDependencySets(), assembly.getResolvedDependencySetArtifacts(),
+            new AddDependencySetsTask( assembly.getDependencySets(), assembly.getResolvedArtifacts(),
                                        configSource.getProject(), projectBuilder, getLogger() );
 
         task.execute( archiver, configSource );

@@ -19,16 +19,6 @@ package org.apache.maven.plugin.assembly.archive;
  * under the License.
  */
 
-import java.io.File;
-import java.io.IOException;
-import java.io.StringReader;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.DebugConfigurationListener;
 import org.apache.maven.plugin.assembly.AssemblerConfigurationSource;
@@ -41,13 +31,13 @@ import org.apache.maven.plugin.assembly.filter.ComponentsXmlArchiverFileFilter;
 import org.apache.maven.plugin.assembly.filter.ContainerDescriptorHandler;
 import org.apache.maven.plugin.assembly.format.AssemblyFormattingException;
 import org.apache.maven.plugin.assembly.interpolation.AssemblyExpressionEvaluator;
-import org.apache.maven.plugin.assembly.model.Assembly;
-import org.apache.maven.plugin.assembly.model.ContainerDescriptorHandlerConfig;
-import org.apache.maven.plugin.assembly.model.ModuleSet;
 import org.apache.maven.plugin.assembly.resolved.ResolvedAssembly;
 import org.apache.maven.plugin.assembly.resolved.ResolvedModuleSet;
 import org.apache.maven.plugin.assembly.utils.AssemblyFileUtils;
 import org.apache.maven.plugin.assembly.utils.AssemblyFormatUtils;
+import org.apache.maven.plugin.assembly.wrappers.WrappedAssembly;
+import org.apache.maven.plugin.assembly.wrappers.WrappedContainerDescriptorHandlerConfig;
+import org.apache.maven.plugin.assembly.wrappers.WrappedModuleSet;
 import org.codehaus.plexus.PlexusConstants;
 import org.codehaus.plexus.PlexusContainer;
 import org.codehaus.plexus.archiver.ArchiveFinalizer;
@@ -78,6 +68,16 @@ import org.codehaus.plexus.personality.plexus.lifecycle.phase.Contextualizable;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 import org.codehaus.plexus.util.xml.Xpp3DomBuilder;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.StringReader;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Controller component designed to organize the many activities involved in creating an assembly archive. This includes
@@ -127,7 +127,7 @@ public class DefaultAssemblyArchiver
     }
 
     /** {@inheritDoc} */
-    public File createArchive( final Assembly assembly, final String fullName, final String format,
+    public File createArchive( final WrappedAssembly assembly, final String fullName, final String format,
                                final AssemblerConfigurationSource configSource, boolean recompressZippedFiles )
         throws ArchiveCreationException, AssemblyFormattingException, InvalidAssemblerConfigurationException
     {
@@ -169,24 +169,21 @@ public class DefaultAssemblyArchiver
             archiver.setDestFile( destFile );
 
             List<ResolvedModuleSet> resolvedModuleSets = new ArrayList<ResolvedModuleSet>();
-            for ( ModuleSet moduleSet : assembly.getModuleSets() )
+            for ( WrappedModuleSet moduleSet : assembly.getModuleSets() )
             {
-                resolvedModuleSets.add( dependencyResolver.resolve( assembly, moduleSet, configSource ) );
+                Set<Artifact> resolve = dependencyResolver.resolve( assembly, moduleSet, configSource );
+                moduleSet.setResolvedArtifacts( resolve );
             }
 
             // OK, this piece of code contains all the stuff left after I extracted resolvedModuleSets.
             // this can probably be simplified quite a lot, since the module sets now have their
             // own artifact resolution.
             final Set<Artifact> dependencySetArtifacts = dependencyResolver.resolve( assembly, configSource );
-
-            // CHECKSTYLE_OFF: LineLength
-            final ResolvedAssembly resolvedAssembly =
-                ResolvedAssembly.create( assembly ).withResolvedModuleSets( resolvedModuleSets ).withDependencySetArtifacts( dependencySetArtifacts );
-            // CHECKSTYLE_ON: LineLength
+            assembly.setResolvedArtifacts(  dependencySetArtifacts );
 
             for ( AssemblyArchiverPhase phase : assemblyPhases )
             {
-                phase.execute( resolvedAssembly, archiver, configSource );
+                phase.execute( assembly, archiver, configSource );
             }
 
             archiver.createArchive();
@@ -215,7 +212,7 @@ public class DefaultAssemblyArchiver
         return destFile;
     }
 
-    private void validate( final Assembly assembly )
+    private void validate( final WrappedAssembly assembly )
         throws InvalidAssemblerConfigurationException
     {
         if ( assembly.getId() == null || assembly.getId().trim().length() < 1 )
@@ -225,7 +222,7 @@ public class DefaultAssemblyArchiver
     }
 
     // CHECKSTYLE_OFF: LineLength
-    private List<ContainerDescriptorHandler> selectContainerDescriptorHandlers( List<ContainerDescriptorHandlerConfig> requestedContainerDescriptorHandlers,
+    private List<ContainerDescriptorHandler> selectContainerDescriptorHandlers( List<WrappedContainerDescriptorHandlerConfig> requestedContainerDescriptorHandlers,
                                                                                 final AssemblerConfigurationSource configSource )
         throws InvalidAssemblerConfigurationException
     // CHECKSTYLE_ON: LineLength
@@ -236,7 +233,7 @@ public class DefaultAssemblyArchiver
 
         if ( requestedContainerDescriptorHandlers == null )
         {
-            requestedContainerDescriptorHandlers = new ArrayList<ContainerDescriptorHandlerConfig>();
+            requestedContainerDescriptorHandlers = new ArrayList<WrappedContainerDescriptorHandlerConfig>();
         }
 
         final List<ContainerDescriptorHandler> handlers = new ArrayList<ContainerDescriptorHandler>();
@@ -244,7 +241,7 @@ public class DefaultAssemblyArchiver
 
         if ( !requestedContainerDescriptorHandlers.isEmpty() )
         {
-            for ( final ContainerDescriptorHandlerConfig config : requestedContainerDescriptorHandlers )
+            for ( final WrappedContainerDescriptorHandlerConfig config : requestedContainerDescriptorHandlers )
             {
                 final String hint = config.getHandlerName();
                 final ContainerDescriptorHandler handler = containerDescriptorHandlers.get( hint );

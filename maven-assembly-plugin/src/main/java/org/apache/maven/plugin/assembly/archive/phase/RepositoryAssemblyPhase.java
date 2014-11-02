@@ -30,9 +30,10 @@ import org.apache.maven.plugin.assembly.archive.phase.wrappers.RepoInfoWrapper;
 import org.apache.maven.plugin.assembly.archive.task.AddDirectoryTask;
 import org.apache.maven.plugin.assembly.format.AssemblyFormattingException;
 import org.apache.maven.plugin.assembly.model.Repository;
-import org.apache.maven.plugin.assembly.resolved.ResolvedAssembly;
 import org.apache.maven.plugin.assembly.utils.AssemblyFormatUtils;
 import org.apache.maven.plugin.assembly.utils.TypeConversionUtils;
+import org.apache.maven.plugin.assembly.wrappers.WrappedAssembly;
+import org.apache.maven.plugin.assembly.wrappers.WrappedRepository;
 import org.apache.maven.shared.repository.RepositoryAssembler;
 import org.apache.maven.shared.repository.RepositoryAssemblyException;
 import org.apache.maven.shared.repository.RepositoryBuilderConfigSource;
@@ -69,15 +70,15 @@ public class RepositoryAssemblyPhase
      * {@inheritDoc}
      */
     @SuppressWarnings( "ResultOfMethodCallIgnored" )
-    public void execute( final ResolvedAssembly assembly, final Archiver archiver,
+    public void execute( final WrappedAssembly assembly, final Archiver archiver,
                          final AssemblerConfigurationSource configSource )
         throws ArchiveCreationException, AssemblyFormattingException, InvalidAssemblerConfigurationException
     {
-        final List<Repository> repositoriesList = assembly.getRepositories();
+        final List<WrappedRepository> repositoriesList = assembly.getRepositories();
 
         final File tempRoot = configSource.getTemporaryRootDirectory();
 
-        for ( final Repository repository : repositoriesList )
+        for ( final WrappedRepository repository : repositoriesList )
         {
             final String outputDirectory =
                 AssemblyFormatUtils.getOutputDirectory( repository.getOutputDirectory(), configSource.getProject(),
@@ -126,7 +127,7 @@ public class RepositoryAssemblyPhase
         return new RepoBuilderConfigSourceWrapper( configSource );
     }
 
-    private RepositoryInfo wrap( final Repository repository )
+    private RepositoryInfo wrap( final WrappedRepository repository )
     {
         return new RepoInfoWrapper( repository );
     }

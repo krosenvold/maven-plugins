@@ -24,6 +24,8 @@ import org.apache.maven.plugin.assembly.AssemblerConfigurationSource;
 import org.apache.maven.plugin.assembly.model.Assembly;
 import org.apache.maven.plugin.assembly.model.ModuleSet;
 import org.apache.maven.plugin.assembly.resolved.ResolvedModuleSet;
+import org.apache.maven.plugin.assembly.wrappers.WrappedAssembly;
+import org.apache.maven.plugin.assembly.wrappers.WrappedModuleSet;
 
 import java.util.Set;
 
@@ -39,10 +41,10 @@ public interface DependencyResolver
     /**
      * Resolve the project dependencies, according to the supplied configuration.
      */
-    Set<Artifact> resolve( Assembly assembly, AssemblerConfigurationSource configSource )
+    Set<Artifact> resolve( WrappedAssembly assembly, AssemblerConfigurationSource configSource )
         throws DependencyResolutionException;
 
-    ResolvedModuleSet resolve( final Assembly assembly, ModuleSet moduleSet,
-                           final AssemblerConfigurationSource configSource )
+    Set<Artifact> resolve( final WrappedAssembly assembly, WrappedModuleSet moduleSet,
+                              final AssemblerConfigurationSource configSource )
         throws DependencyResolutionException;
 }

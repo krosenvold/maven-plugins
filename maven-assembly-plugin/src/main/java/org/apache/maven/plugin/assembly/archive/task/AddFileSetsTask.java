@@ -31,6 +31,7 @@ import org.apache.maven.plugin.assembly.format.ReaderFormatter;
 import org.apache.maven.plugin.assembly.model.FileSet;
 import org.apache.maven.plugin.assembly.utils.AssemblyFormatUtils;
 import org.apache.maven.plugin.assembly.utils.TypeConversionUtils;
+import org.apache.maven.plugin.assembly.wrappers.WrappedFileSet;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.archiver.Archiver;
 import org.codehaus.plexus.components.io.functions.InputStreamTransformer;
@@ -43,7 +44,7 @@ import org.codehaus.plexus.logging.console.ConsoleLogger;
 public class AddFileSetsTask
 {
 
-    private final List<FileSet> fileSets;
+    private final List<WrappedFileSet> fileSets;
 
     private Logger logger;
 
@@ -51,14 +52,9 @@ public class AddFileSetsTask
 
     private MavenProject moduleProject;
 
-    public AddFileSetsTask( final List<FileSet> fileSets )
+    public AddFileSetsTask( final List<WrappedFileSet> fileSets )
     {
         this.fileSets = fileSets;
-    }
-
-    public AddFileSetsTask( final FileSet... fileSets )
-    {
-        this.fileSets = new ArrayList<FileSet>( Arrays.asList( fileSets ) );
     }
 
     public void execute( final Archiver archiver, final AssemblerConfigurationSource configSource )
@@ -85,13 +81,13 @@ public class AddFileSetsTask
             }
         }
 
-        for ( final FileSet fileSet : fileSets )
+        for ( final WrappedFileSet fileSet : fileSets )
         {
             addFileSet( fileSet, archiver, configSource, archiveBaseDir );
         }
     }
 
-    void addFileSet( final FileSet fileSet, final Archiver archiver, final AssemblerConfigurationSource configSource,
+    void addFileSet( final WrappedFileSet fileSet, final Archiver archiver, final AssemblerConfigurationSource configSource,
                      final File archiveBaseDir )
         throws AssemblyFormattingException, ArchiveCreationException
     {
@@ -171,7 +167,7 @@ public class AddFileSetsTask
         }
     }
 
-    File getFileSetDirectory( final FileSet fileSet, final File basedir, final File archiveBaseDir )
+    File getFileSetDirectory( final WrappedFileSet fileSet, final File basedir, final File archiveBaseDir )
         throws ArchiveCreationException, AssemblyFormattingException
     {
         String sourceDirectory = fileSet.getDirectory();

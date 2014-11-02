@@ -29,6 +29,7 @@ import org.apache.maven.plugin.assembly.model.FileItem;
 import org.apache.maven.plugin.assembly.model.FileSet;
 import org.apache.maven.plugin.assembly.model.Repository;
 import org.apache.maven.plugin.assembly.resolved.functions.ResolvedModuleSetConsumer;
+import org.apache.maven.plugin.assembly.wrappers.WrappedAssembly;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,13 +38,13 @@ import java.util.Set;
 public class ResolvedAssembly
 {
 
-    private final Assembly assembly;
+    private final WrappedAssembly assembly;
 
     private final List<ResolvedModuleSet> resolvedModuleSets;
 
     private final Set<Artifact> dependencySetArtifacts;
 
-    private ResolvedAssembly( Assembly assembly, List<ResolvedModuleSet> resolvedModuleSets,
+    private ResolvedAssembly( WrappedAssembly assembly, List<ResolvedModuleSet> resolvedModuleSets,
                               Set<Artifact> dependencySetArtifacts )
     {
         this.assembly = assembly;
@@ -51,7 +52,7 @@ public class ResolvedAssembly
         this.dependencySetArtifacts = dependencySetArtifacts;
     }
 
-    public static ResolvedAssembly create( Assembly assembly )
+    public static ResolvedAssembly create( WrappedAssembly assembly )
     {
         return new ResolvedAssembly( assembly, null, null );
     }

@@ -23,6 +23,7 @@ import org.apache.maven.plugin.assembly.AssemblerConfigurationSource;
 import org.apache.maven.plugin.assembly.InvalidAssemblerConfigurationException;
 import org.apache.maven.plugin.assembly.format.AssemblyFormattingException;
 import org.apache.maven.plugin.assembly.model.Assembly;
+import org.apache.maven.plugin.assembly.wrappers.WrappedAssembly;
 
 import java.io.File;
 
@@ -46,17 +47,17 @@ public interface AssemblyArchiver
      * instances, executing each to handle a different
      * top-level section of the assembly descriptor, if that section is present.</li>
      * </ol>
-     * @param assembly The {@link Assembly}
+     * @param assembly The {@link org.apache.maven.plugin.assembly.model.Assembly}
      * @param fullName The full name.
      * @param format The format.
-     * @param configSource The {@link AssemblerConfigurationSource}
+     * @param configSource The {@link org.apache.maven.plugin.assembly.AssemblerConfigurationSource}
      * @param recompressZippedFiles recompress zipped files.
      * @return The resulting archive file.
      * @throws ArchiveCreationException when creation fails
      * @throws AssemblyFormattingException when formatting fails
      * @throws InvalidAssemblerConfigurationException when the configurationis bad
      */
-    File createArchive( Assembly assembly, String fullName, String format, AssemblerConfigurationSource configSource,
+    File createArchive( WrappedAssembly assembly, String fullName, String format, AssemblerConfigurationSource configSource,
                         boolean recompressZippedFiles )
         throws ArchiveCreationException, AssemblyFormattingException, InvalidAssemblerConfigurationException;
 }

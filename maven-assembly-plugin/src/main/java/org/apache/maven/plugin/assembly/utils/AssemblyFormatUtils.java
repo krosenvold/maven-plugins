@@ -24,6 +24,7 @@ import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.assembly.AssemblerConfigurationSource;
 import org.apache.maven.plugin.assembly.format.AssemblyFormattingException;
 import org.apache.maven.plugin.assembly.model.Assembly;
+import org.apache.maven.plugin.assembly.wrappers.WrappedAssembly;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.interpolation.InterpolationException;
 import org.codehaus.plexus.interpolation.PrefixedObjectValueSource;
@@ -57,7 +58,7 @@ public final class AssemblyFormatUtils
      * @param assembly
      * @return the distribution name
      */
-    public static String getDistributionName( final Assembly assembly, final AssemblerConfigurationSource configSource )
+    public static String getDistributionName( final WrappedAssembly assembly, final AssemblerConfigurationSource configSource )
     {
         final String finalName = configSource.getFinalName();
         final boolean appendAssemblyId = configSource.isAssemblyIdAppended();

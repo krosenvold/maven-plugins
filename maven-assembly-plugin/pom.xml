@@ -257,6 +257,7 @@ under the License.
       <plugin>
         <groupId>org.codehaus.modello</groupId>
         <artifactId>modello-maven-plugin</artifactId>
+        <version>1.8.2</version>
         <configuration>
           <version>${mdoVersion}</version>
           <models>

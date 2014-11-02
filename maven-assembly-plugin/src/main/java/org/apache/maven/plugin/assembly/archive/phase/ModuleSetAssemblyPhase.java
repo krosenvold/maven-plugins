@@ -41,26 +41,29 @@ import org.apache.maven.plugin.assembly.archive.task.AddArtifactTask;
 import org.apache.maven.plugin.assembly.archive.task.AddDependencySetsTask;
 import org.apache.maven.plugin.assembly.archive.task.AddFileSetsTask;
 import org.apache.maven.plugin.assembly.format.AssemblyFormattingException;
-import org.apache.maven.plugin.assembly.format.ReaderFormatter;
 import org.apache.maven.plugin.assembly.model.DependencySet;
 import org.apache.maven.plugin.assembly.model.FileSet;
 import org.apache.maven.plugin.assembly.model.ModuleBinaries;
 import org.apache.maven.plugin.assembly.model.ModuleSet;
 import org.apache.maven.plugin.assembly.model.ModuleSources;
-import org.apache.maven.plugin.assembly.resolved.ResolvedAssembly;
 import org.apache.maven.plugin.assembly.resolved.ResolvedModuleSet;
 import org.apache.maven.plugin.assembly.resolved.functions.ResolvedModuleSetConsumer;
 import org.apache.maven.plugin.assembly.utils.AssemblyFormatUtils;
 import org.apache.maven.plugin.assembly.utils.FilterUtils;
 import org.apache.maven.plugin.assembly.utils.ProjectUtils;
 import org.apache.maven.plugin.assembly.utils.TypeConversionUtils;
+import org.apache.maven.plugin.assembly.wrappers.WrappedAssembly;
+import org.apache.maven.plugin.assembly.wrappers.WrappedDependencySet;
+import org.apache.maven.plugin.assembly.wrappers.WrappedFileSet;
+import org.apache.maven.plugin.assembly.wrappers.WrappedModuleBinaries;
+import org.apache.maven.plugin.assembly.wrappers.WrappedModuleSet;
+import org.apache.maven.plugin.assembly.wrappers.WrappedModuleSources;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.MavenProjectBuilder;
 import org.codehaus.plexus.archiver.Archiver;
 import org.codehaus.plexus.archiver.manager.ArchiverManager;
 import org.codehaus.plexus.component.annotations.Component;
 import org.codehaus.plexus.component.annotations.Requirement;
-import org.codehaus.plexus.components.io.functions.InputStreamTransformer;
 import org.codehaus.plexus.logging.AbstractLogEnabled;
 import org.codehaus.plexus.logging.Logger;
 
@@ -108,30 +111,30 @@ public class ModuleSetAssemblyPhase
     /**
      * {@inheritDoc}
      */
-    public void execute( final ResolvedAssembly assembly, final Archiver archiver,
+    public void execute( final WrappedAssembly assembly, final Archiver archiver,
                          final AssemblerConfigurationSource configSource )
         throws ArchiveCreationException, AssemblyFormattingException, InvalidAssemblerConfigurationException
     {
         assembly.forEachResolvedModule( new ResolvedModuleSetConsumer()
         {
-            public void accept( ResolvedModuleSet resolvedModule )
+            public void accept( WrappedModuleSet resolvedModule )
                 throws ArchiveCreationException, AssemblyFormattingException, InvalidAssemblerConfigurationException
             {
-                validate( resolvedModule.getModuleSet(), configSource );
+                validate( resolvedModule, configSource );
 
                 final Set<MavenProject> moduleProjects =
-                    getModuleProjects( resolvedModule.getModuleSet(), configSource, getLogger() );
+                    getModuleProjects( resolvedModule, configSource, getLogger() );
 
-                final ModuleSources sources = resolvedModule.getModuleSet().getSources();
+                final WrappedModuleSources sources = resolvedModule.getSources();
                 addModuleSourceFileSets( sources, moduleProjects, archiver, configSource );
 
-                final ModuleBinaries binaries = resolvedModule.getModuleSet().getBinaries();
+                final WrappedModuleBinaries binaries = resolvedModule.getBinaries();
                 addModuleBinaries( resolvedModule, binaries, moduleProjects, archiver, configSource );
             }
         } );
     }
 
-    private void validate( final ModuleSet moduleSet, final AssemblerConfigurationSource configSource )
+    private void validate( final WrappedModuleSet moduleSet, final AssemblerConfigurationSource configSource )
     {
         if ( ( moduleSet.getSources() == null ) && ( moduleSet.getBinaries() == null ) )
         {
@@ -157,7 +160,7 @@ public class ModuleSetAssemblyPhase
 
         if ( moduleSet.getSources() != null )
         {
-            final ModuleSources sources = moduleSet.getSources();
+            final WrappedModuleSources sources = moduleSet.getSources();
             if ( isDeprecatedModuleSourcesConfigPresent( sources ) )
             {
                 getLogger().warn( "[DEPRECATION] Use of <moduleSources/> as a file-set is deprecated. "
@@ -172,7 +175,7 @@ public class ModuleSetAssemblyPhase
         }
     }
 
-    void addModuleBinaries( ResolvedModuleSet resolvedModule, final ModuleBinaries binaries,
+    void addModuleBinaries( WrappedModuleSet resolvedModule, final WrappedModuleBinaries binaries,
                             final Set<MavenProject> projects, final Archiver archiver,
                             final AssemblerConfigurationSource configSource )
         throws ArchiveCreationException, AssemblyFormattingException, InvalidAssemblerConfigurationException
@@ -244,11 +247,11 @@ public class ModuleSetAssemblyPhase
             addModuleArtifact( artifact, project, archiver, configSource, binaries );
         }
 
-        final List<DependencySet> depSets = getDependencySets( binaries );
+        final List<WrappedDependencySet> depSets = getDependencySets( binaries );
 
         if ( depSets != null )
         {
-            for ( final DependencySet ds : depSets )
+            for ( final WrappedDependencySet ds : depSets )
             {
                 // NOTE: Disabling useProjectArtifact flag, since module artifact has already been handled!
                 ds.setUseProjectArtifact( false );
@@ -277,7 +280,7 @@ public class ModuleSetAssemblyPhase
                 getLogger().debug( "Processing binary dependencies for module project: " + moduleProject.getId() );
 
                 final AddDependencySetsTask task =
-                    new AddDependencySetsTask( depSets, resolvedModule.getArtifacts(), moduleProject, projectBuilder,
+                    new AddDependencySetsTask( depSets, resolvedModule.getResolvedArtifacts(), moduleProject, projectBuilder,
                                                getLogger() );
 
                 task.setModuleProject( moduleProject );
@@ -310,9 +313,9 @@ public class ModuleSetAssemblyPhase
         return result;
     }
 
-    public static List<DependencySet> getDependencySets( final ModuleBinaries binaries )
+    public static List<WrappedDependencySet> getDependencySets( final WrappedModuleBinaries binaries )
     {
-        List<DependencySet> depSets = binaries.getDependencySets();
+        List<WrappedDependencySet> depSets = binaries.getDependencySets();
 
         if ( ( ( depSets == null ) || depSets.isEmpty() ) && binaries.isIncludeDependencies() )
         {
@@ -327,7 +330,7 @@ public class ModuleSetAssemblyPhase
             impliedDependencySet.setUnpack( binaries.isUnpack() );
             // unpackOptions is handled in the first stage of dependency-set handling, below.
 
-            depSets = Collections.singletonList( impliedDependencySet );
+            depSets = Collections.singletonList( new WrappedDependencySet( impliedDependencySet ));
         }
 
         return depSets;
@@ -356,7 +359,7 @@ public class ModuleSetAssemblyPhase
     // }
 
     void addModuleArtifact( final Artifact artifact, final MavenProject project, final Archiver archiver,
-                            final AssemblerConfigurationSource configSource, final ModuleBinaries binaries )
+                            final AssemblerConfigurationSource configSource, final WrappedModuleBinaries binaries )
         throws ArchiveCreationException, AssemblyFormattingException
     {
         if ( artifact.getFile() == null )
@@ -397,7 +400,7 @@ public class ModuleSetAssemblyPhase
         task.execute( archiver, configSource );
     }
 
-    void addModuleSourceFileSets( final ModuleSources sources, final Set<MavenProject> moduleProjects,
+    void addModuleSourceFileSets( final WrappedModuleSources sources, final Set<MavenProject> moduleProjects,
                                   final Archiver archiver, final AssemblerConfigurationSource configSource )
         throws ArchiveCreationException, AssemblyFormattingException
     {
@@ -406,7 +409,7 @@ public class ModuleSetAssemblyPhase
             return;
         }
 
-        final List<FileSet> fileSets = new ArrayList<FileSet>();
+        final List<WrappedFileSet> fileSets = new ArrayList<WrappedFileSet>();
 
         if ( isDeprecatedModuleSourcesConfigPresent( sources ) )
         {
@@ -416,17 +419,17 @@ public class ModuleSetAssemblyPhase
             fs.setExcludes( sources.getExcludes() );
             fs.setUseDefaultExcludes( sources.isUseDefaultExcludes() );
 
-            fileSets.add( fs );
+            fileSets.add( new WrappedFileSet( fs ) );
         }
 
-        List<FileSet> subFileSets = sources.getFileSets();
+        List<WrappedFileSet> subFileSets = sources.getFileSets();
 
         if ( ( subFileSets == null ) || subFileSets.isEmpty() )
         {
             final FileSet fs = new FileSet();
             fs.setDirectory( "src" );
 
-            subFileSets = Collections.singletonList( fs );
+            subFileSets = Collections.singletonList( new WrappedFileSet( fs ));
         }
 
         fileSets.addAll( subFileSets );
@@ -435,9 +438,9 @@ public class ModuleSetAssemblyPhase
         {
             getLogger().info( "Processing sources for module project: " + moduleProject.getId() );
 
-            final List<FileSet> moduleFileSets = new ArrayList<FileSet>();
+            final List<WrappedFileSet> moduleFileSets = new ArrayList<WrappedFileSet>();
 
-            for ( final FileSet fileSet : fileSets )
+            for ( final WrappedFileSet fileSet : fileSets )
             {
                 moduleFileSets.add( createFileSet( fileSet, sources, moduleProject, configSource ) );
             }
@@ -454,8 +457,9 @@ public class ModuleSetAssemblyPhase
 
     /**
      * Determine whether the deprecated file-set configuration directly within the ModuleSources object is present.
+     * @param sources
      */
-    boolean isDeprecatedModuleSourcesConfigPresent( @Nonnull final ModuleSources sources )
+    boolean isDeprecatedModuleSourcesConfigPresent( @Nonnull final WrappedModuleSources sources )
     {
         boolean result = false;
 
@@ -476,7 +480,7 @@ public class ModuleSetAssemblyPhase
     }
 
     @Nonnull
-    FileSet createFileSet( @Nonnull final FileSet fileSet, @Nonnull final ModuleSources sources,
+    WrappedFileSet createFileSet( @Nonnull final WrappedFileSet fileSet, @Nonnull final WrappedModuleSources sources,
                            @Nonnull final MavenProject moduleProject,
                            @Nonnull final AssemblerConfigurationSource configSource )
         throws AssemblyFormattingException
@@ -563,11 +567,11 @@ public class ModuleSetAssemblyPhase
         getLogger().debug( "module source directory is: " + sourcePath );
         getLogger().debug( "module dest directory is: " + destPath + " (assembly basedir may be prepended)" );
 
-        return fs;
+        return new WrappedFileSet(fs);
     }
 
     @Nonnull
-    public static Set<MavenProject> getModuleProjects( final ModuleSet moduleSet,
+    public static Set<MavenProject> getModuleProjects( final WrappedModuleSet moduleSet,
                                                        final AssemblerConfigurationSource configSource,
                                                        final Logger logger )
         throws ArchiveCreationException

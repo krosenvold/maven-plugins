@@ -20,6 +20,7 @@ package org.apache.maven.plugin.assembly.resolved;
  */
 
 import org.apache.maven.plugin.assembly.model.Assembly;
+import org.apache.maven.plugin.assembly.wrappers.WrappedAssembly;
 
 public class AssemblyId
 {
@@ -35,7 +36,7 @@ public class AssemblyId
         return new AssemblyId( id );
     }
 
-    public static AssemblyId createAssemblyId( Assembly id )
+    public static AssemblyId createAssemblyId( WrappedAssembly id )
     {
         return new AssemblyId( id.getId() );
     }
