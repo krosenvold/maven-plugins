@@ -45,8 +45,7 @@ import org.apache.maven.shared.io.location.Locator;
 import org.apache.maven.shared.io.location.LocatorStrategy;
 import org.apache.maven.shared.utils.ReaderFactory;
 import org.codehaus.plexus.interpolation.fixed.FixedStringSearchInterpolator;
-import org.codehaus.plexus.interpolation.fixed.PrefixedObjectValueSource;
-import org.codehaus.plexus.interpolation.fixed.PrefixedPropertiesValueSource;
+import org.codehaus.plexus.interpolation.fixed.FixedValueSource;
 import org.codehaus.plexus.logging.AbstractLogEnabled;
 import org.codehaus.plexus.logging.Logger;
 import org.codehaus.plexus.logging.console.ConsoleLogger;
@@ -65,6 +64,12 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import static org.apache.maven.plugin.assembly.utils.InterpolationConstants.PROJECT_PREFIXES;
+import static org.apache.maven.plugin.assembly.utils.InterpolationConstants.PROJECT_PROPERTIES_PREFIXES;
+import static org.codehaus.plexus.interpolation.fixed.ObjectValueSource.asObjectValueSource;
+import static org.codehaus.plexus.interpolation.fixed.PrefixedValueSource.prefix;
+import static org.codehaus.plexus.interpolation.fixed.PropertiesValueSource.asPropertiesValueSource;
 
 /**
  * @version $Id$
@@ -366,10 +371,11 @@ public class DefaultAssemblyReader
 
     public static FixedStringSearchInterpolator createProjectInterpolator( MavenProject project )
     {
+        FixedValueSource props =  asPropertiesValueSource( project.getProperties() );
         return FixedStringSearchInterpolator.create(
-            new PrefixedPropertiesValueSource( InterpolationConstants.PROJECT_PROPERTIES_PREFIXES,
-                                               project.getProperties(), true ),
-            new PrefixedObjectValueSource( InterpolationConstants.PROJECT_PREFIXES, project, true ) );
+            prefix( props ).with( PROJECT_PROPERTIES_PREFIXES).allowUnprefixed(),
+            prefix( asObjectValueSource( project ) ).with(  PROJECT_PREFIXES).allowUnprefixed()
+            );
     }
 
     private void debugPrintAssembly( final String message, final Assembly assembly )

@@ -44,14 +44,18 @@ import org.apache.maven.shared.filtering.MavenReaderFilter;
 import org.apache.maven.shared.utils.cli.CommandLineUtils;
 import org.codehaus.plexus.configuration.PlexusConfiguration;
 import org.codehaus.plexus.interpolation.fixed.FixedStringSearchInterpolator;
-import org.codehaus.plexus.interpolation.fixed.PrefixedPropertiesValueSource;
-import org.codehaus.plexus.interpolation.fixed.PropertiesBasedValueSource;
+import org.codehaus.plexus.interpolation.fixed.FixedValueSource;
+import org.codehaus.plexus.interpolation.fixed.PrefixedValueSource;
 
 import javax.annotation.Nonnull;
 import java.io.File;
 import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
+
+import static org.codehaus.plexus.interpolation.fixed.ObjectValueSource.asObjectValueSource;
+import static org.codehaus.plexus.interpolation.fixed.PrefixedValueSource.prefix;
+import static org.codehaus.plexus.interpolation.fixed.PropertiesValueSource.asPropertiesValueSource;
 
 /**
  * @author <a href="mailto:brett@apache.org">Brett Porter</a>
@@ -569,7 +573,7 @@ public abstract class AbstractAssemblyMojo
             settingsProperties.setProperty( "settings.localRepository", getLocalRepository().getBasedir() );
         }
 
-        return FixedStringSearchInterpolator.create( new PropertiesBasedValueSource( settingsProperties ) );
+        return FixedStringSearchInterpolator.create( asPropertiesValueSource( settingsProperties ) );
 
     }
 
@@ -592,16 +596,15 @@ public abstract class AbstractAssemblyMojo
             }
         }
 
-        PropertiesBasedValueSource cliProps = new PropertiesBasedValueSource( commandLineProperties );
+        FixedValueSource cliProps = asPropertiesValueSource( commandLineProperties );
         return FixedStringSearchInterpolator.create( cliProps );
 
     }
 
     private FixedStringSearchInterpolator createEnvInterpolator()
     {
-        PrefixedPropertiesValueSource envProps = new PrefixedPropertiesValueSource( Collections.singletonList( "env." ),
-                                                                                    CommandLineUtils.getSystemEnvVars(
-                                                                                        false ), true );
+        FixedValueSource props = asPropertiesValueSource( CommandLineUtils.getSystemEnvVars( false ) );
+        PrefixedValueSource envProps = prefix( props ).with( "env." ).allowUnprefixed();
         return FixedStringSearchInterpolator.create( envProps );
     }
 
@@ -1004,12 +1007,12 @@ public abstract class AbstractAssemblyMojo
         {
             // 5
             return FixedStringSearchInterpolator.create(
-                new org.codehaus.plexus.interpolation.fixed.PrefixedObjectValueSource(
-                    InterpolationConstants.PROJECT_PREFIXES, mainProject, true ),
+                prefix( asObjectValueSource( mainProject ) )
+                    .with( InterpolationConstants.PROJECT_PREFIXES ).allowUnprefixed(),
 
                 // 6
-                new org.codehaus.plexus.interpolation.fixed.PrefixedPropertiesValueSource(
-                    InterpolationConstants.PROJECT_PROPERTIES_PREFIXES, mainProject.getProperties(), true ) );
+                prefix( asPropertiesValueSource( mainProject.getProperties() ) )
+                    .with(InterpolationConstants.PROJECT_PROPERTIES_PREFIXES).allowUnprefixed());
         }
         else
         {

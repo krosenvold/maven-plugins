@@ -31,7 +31,7 @@ import org.apache.maven.plugin.assembly.model.DependencySet;
 import org.apache.maven.plugin.assembly.testutils.PojoConfigSource;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.interpolation.fixed.FixedStringSearchInterpolator;
-import org.codehaus.plexus.interpolation.fixed.PropertiesBasedValueSource;
+import org.codehaus.plexus.interpolation.fixed.PropertiesValueSource;
 import org.codehaus.plexus.logging.Logger;
 import org.codehaus.plexus.logging.console.ConsoleLogger;
 import org.easymock.classextension.EasyMockSupport;
@@ -222,7 +222,7 @@ public class AssemblyInterpolatorTest
 
         expect( cs.getRepositoryInterpolator()).andReturn(  FixedStringSearchInterpolator.create(  ) ).anyTimes();
         expect( cs.getCommandLinePropsInterpolator()).andReturn( FixedStringSearchInterpolator.create(
-            new PropertiesBasedValueSource(execProps) ) ).anyTimes();
+            PropertiesValueSource.asPropertiesValueSource( execProps ) ) ).anyTimes();
         expect( cs.getEnvInterpolator()).andReturn( FixedStringSearchInterpolator.empty() ).anyTimes();
 
         mm.replayAll();

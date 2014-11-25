@@ -26,9 +26,7 @@ import org.apache.maven.plugin.assembly.format.AssemblyFormattingException;
 import org.apache.maven.plugin.assembly.model.Assembly;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.interpolation.fixed.FixedStringSearchInterpolator;
-import org.codehaus.plexus.interpolation.fixed.PrefixedObjectValueSource;
-import org.codehaus.plexus.interpolation.fixed.PrefixedPropertiesValueSource;
-import org.codehaus.plexus.interpolation.fixed.PropertiesBasedValueSource;
+import org.codehaus.plexus.interpolation.fixed.PrefixedValueSource;
 import org.codehaus.plexus.util.StringUtils;
 
 import javax.annotation.Nonnull;
@@ -38,6 +36,11 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Properties;
+
+import static org.apache.maven.plugin.assembly.utils.InterpolationConstants.PROJECT_PREFIXES;
+import static org.codehaus.plexus.interpolation.fixed.ObjectValueSource.asObjectValueSource;
+import static org.codehaus.plexus.interpolation.fixed.PrefixedValueSource.prefix;
+import static org.codehaus.plexus.interpolation.fixed.PropertiesValueSource.asPropertiesValueSource;
 
 /**
  * @version $Id$
@@ -93,7 +96,7 @@ public final class AssemblyFormatUtils
             return FixedStringSearchInterpolator.empty();
         }
 
-        return FixedStringSearchInterpolator.create( new PropertiesBasedValueSource( specialExpressionOverrides ) );
+        return FixedStringSearchInterpolator.create( asPropertiesValueSource( specialExpressionOverrides ) );
     }
 
     @Nonnull
@@ -102,11 +105,10 @@ public final class AssemblyFormatUtils
         if ( moduleProject != null )
         {
             return FixedStringSearchInterpolator.createWithPermittedNulls(
-                new PrefixedObjectValueSource( "module.", moduleProject ),
-                new PrefixedPropertiesValueSource( "module.properties.", moduleProject.getProperties() ),
-                moduleProject.getArtifact() != null
-                    ? new PrefixedObjectValueSource( "module.", moduleProject.getArtifact() )
-                    : null );
+                prefix( asObjectValueSource( moduleProject ) ).with( "module." ),
+                prefix( asPropertiesValueSource( moduleProject.getProperties() ) ).with( "module.properties." ),
+                moduleProject.getArtifact() != null ? prefix( asObjectValueSource( moduleProject.getArtifact() ) ).with(
+                    "module." ) : null );
         }
         else
         {
@@ -119,13 +121,10 @@ public final class AssemblyFormatUtils
     {
         if ( moduleArtifact != null )
         {
-            // CHECKSTYLE_OFF: LineLength
-            return FixedStringSearchInterpolator.create( new PrefixedObjectValueSource( "module.", moduleArtifact ),
-                                                         new PrefixedObjectValueSource( "module.",
-                                                                                        moduleArtifact.getArtifactHandler() ),
-                                                         new PrefixedObjectValueSource( "module.handler.",
-                                                                                        moduleArtifact.getArtifactHandler() ) );
-            // CHECKSTYLE_ON: LineLength
+            return FixedStringSearchInterpolator.create(
+                prefix( asObjectValueSource( moduleArtifact ) ).with( "module." ),
+                prefix( asObjectValueSource( moduleArtifact.getArtifactHandler() ) ).with( "module." ),
+                prefix( asObjectValueSource( moduleArtifact.getArtifactHandler() ) ).with( "module.handler." ) );
         }
         else
         {
@@ -139,17 +138,16 @@ public final class AssemblyFormatUtils
     {
         if ( artifactProject != null )
         {
-            PrefixedObjectValueSource vs = null;
+            PrefixedValueSource vs = null;
             if ( artifactProject.getArtifact() != null )
             {
-                vs = new PrefixedObjectValueSource( "artifact.", artifactProject.getArtifact() );
+                vs = prefix( asObjectValueSource( artifactProject.getArtifact() ) ).with( "artifact." );
             }
 
             return FixedStringSearchInterpolator.createWithPermittedNulls(
-                new PrefixedObjectValueSource( "artifact.", artifactProject ),
-                new PrefixedPropertiesValueSource( "artifact.properties.", artifactProject.getProperties() ), vs );
-
-
+                prefix( asObjectValueSource( artifactProject ) ).with( "artifact." ),
+                prefix( asPropertiesValueSource( artifactProject.getProperties() ) ).with( "artifact.properties." ),
+                vs );
         }
         else
         {
@@ -162,11 +160,11 @@ public final class AssemblyFormatUtils
     @Nonnull
     public static FixedStringSearchInterpolator artifactInterpolator( @Nonnull final Artifact artifact )
     {
-        return FixedStringSearchInterpolator.create( new PrefixedObjectValueSource( "artifact.", artifact ),
-                                                     new PrefixedObjectValueSource( "artifact.",
-                                                                                    artifact.getArtifactHandler() ),
-                                                     new PrefixedObjectValueSource( "artifact.handler.",
-                                                                                    artifact.getArtifactHandler() ) );
+        return FixedStringSearchInterpolator.create( prefix( asObjectValueSource( artifact ) ).with( "artifact." ),
+                                                     prefix(
+                                                         asObjectValueSource( artifact.getArtifactHandler() ) ).with(
+                                                         "artifact." ), prefix(
+            asObjectValueSource( artifact.getArtifactHandler() ) ).with( "artifact.handler." ) );
     }
 
 
@@ -187,7 +185,7 @@ public final class AssemblyFormatUtils
             specialRules.setProperty( "dashClassifier", "" );
         }
 
-        return FixedStringSearchInterpolator.create( new PropertiesBasedValueSource( specialRules ) );
+        return FixedStringSearchInterpolator.create( asPropertiesValueSource( specialRules ) );
     }
 
 
@@ -241,7 +239,7 @@ public final class AssemblyFormatUtils
 
                 if ( userProperties != null )
                 {
-                    return FixedStringSearchInterpolator.create( new PropertiesBasedValueSource( userProperties ) );
+                    return FixedStringSearchInterpolator.create( asPropertiesValueSource( userProperties ) );
                 }
             }
         }
@@ -254,8 +252,7 @@ public final class AssemblyFormatUtils
         {
             // 5
             return FixedStringSearchInterpolator.create(
-                new org.codehaus.plexus.interpolation.fixed.PrefixedObjectValueSource(
-                    InterpolationConstants.PROJECT_PREFIXES, mainProject, true ) );
+                prefix( asObjectValueSource( mainProject ) ).with( PROJECT_PREFIXES ).allowUnprefixed() );
         }
         else
         {

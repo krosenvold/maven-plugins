@@ -29,7 +29,8 @@ import org.apache.maven.plugin.assembly.testutils.PojoConfigSource;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluationException;
 import org.codehaus.plexus.interpolation.fixed.FixedStringSearchInterpolator;
-import org.codehaus.plexus.interpolation.fixed.PropertiesBasedValueSource;
+import org.codehaus.plexus.interpolation.fixed.FixedValueSource;
+import org.codehaus.plexus.interpolation.fixed.PropertiesValueSource;
 import org.easymock.classextension.EasyMockSupport;
 import org.easymock.classextension.IMocksControl;
 
@@ -113,7 +114,7 @@ public class AssemblyExpressionEvaluatorTest
         final Properties execProps = new Properties();
         execProps.setProperty( "groupId", "still.another.id" );
 
-        PropertiesBasedValueSource cliProps = new PropertiesBasedValueSource( execProps );
+        FixedValueSource cliProps = PropertiesValueSource.asPropertiesValueSource( execProps );
         expect( session.getExecutionProperties()).andReturn( execProps ).anyTimes();
         expect( session.getUserProperties()).andReturn( new Properties() ).anyTimes();
 
